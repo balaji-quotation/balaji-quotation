@@ -266,19 +266,31 @@ function erpPermissionMap()
         'quotations.view' => [
             'Administrator',
             'Manager',
-            'Accounts'
+            'Production',
+            'Quality',
+            'Dispatch',
+            'Accounts',
+            'User'
         ],
 
         'quotations.add' => [
             'Administrator',
             'Manager',
-            'Accounts'
+            'Production',
+            'Quality',
+            'Dispatch',
+            'Accounts',
+            'User'
         ],
 
         'quotations.edit' => [
             'Administrator',
             'Manager',
-            'Accounts'
+            'Production',
+            'Quality',
+            'Dispatch',
+            'Accounts',
+            'User'
         ],
 
         'quotations.delete' => [
