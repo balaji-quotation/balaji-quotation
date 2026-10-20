@@ -8,6 +8,14 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 include("../includes/db.php");
+require_once __DIR__ . "/../includes/permissions.php";
+erpRequireCompanyUser($conn);
+erpRequire('clients.add');
+$companyId = erpCurrentCompanyId();
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], (string)($_POST['csrf_token'] ?? ''))) {
+    http_response_code(400);
+    exit('Invalid request.');
+}
 
 
 /*
@@ -65,6 +73,7 @@ if ($company_name === '') {
 $sql = "
     INSERT INTO clients
     (
+        company_id,
         company_name,
         contact_person,
         gstin,
@@ -74,7 +83,7 @@ $sql = "
         status
     )
     VALUES
-    (?, ?, ?, ?, ?, ?, ?)
+    (?, ?, ?, ?, ?, ?, ?, ?)
 ";
 
 
@@ -93,7 +102,8 @@ if (!$stmt) {
 
 mysqli_stmt_bind_param(
     $stmt,
-    "sssssss",
+    "isssssss",
+    $companyId,
     $company_name,
     $contact_person,
     $gstin,
