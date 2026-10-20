@@ -185,8 +185,9 @@ if (!$delete_stmt) {
 
 mysqli_stmt_bind_param(
     $delete_stmt,
-    "i",
-    $id
+    "ii",
+    $id,
+    $companyId
 );
 
 if (!mysqli_stmt_execute($delete_stmt)) {
