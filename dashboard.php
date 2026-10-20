@@ -14,6 +14,11 @@ if (strcasecmp((string)($_SESSION['user_role'] ?? ''), 'Super Admin') === 0) {
     exit;
 }
 
+if (!empty($_SESSION['company_id'])) {
+    header("Location: client/dashboard.php");
+    exit;
+}
+
 include("includes/db.php");
 include("includes/header.php");
 include("includes/sidebar.php");
