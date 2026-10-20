@@ -18,6 +18,11 @@ if (empty($_SESSION['csrf_token'])) {
 
 
 include("../includes/db.php");
+require_once __DIR__ . '/../includes/permissions.php';
+erpRequireCompanyUser($conn);
+erpRequire('quotations.edit');
+$companyId = erpCurrentCompanyId();
+$userId = (int)$_SESSION['user_id'];
 include("../includes/header.php");
 include("../includes/sidebar.php");
 
@@ -48,6 +53,8 @@ $source_sql = "
     INNER JOIN clients c
         ON c.id = q.client_id
     WHERE q.id = ?
+      AND q.company_id = ?
+      AND q.created_by = ?
     LIMIT 1
 ";
 
@@ -66,8 +73,10 @@ if (!$source_stmt) {
 
 mysqli_stmt_bind_param(
     $source_stmt,
-    "i",
-    $source_id
+    "iii",
+    $source_id,
+    $companyId,
+    $userId
 );
 
 mysqli_stmt_execute(
@@ -125,6 +134,7 @@ $root_sql = "
     SELECT quotation_no
     FROM quotations
     WHERE id = ?
+      AND company_id = ?
     LIMIT 1
 ";
 
@@ -143,8 +153,9 @@ if (!$root_stmt) {
 
 mysqli_stmt_bind_param(
     $root_stmt,
-    "i",
-    $revision_root_id
+    "ii",
+    $revision_root_id,
+    $companyId
 );
 
 mysqli_stmt_execute(
@@ -199,9 +210,8 @@ $revision_sql = "
             0
         ) AS max_revision
     FROM quotations
-    WHERE
-        id = ?
-        OR revision_of_quotation_id = ?
+    WHERE company_id = ?
+      AND (id = ? OR revision_of_quotation_id = ?)
 ";
 
 $revision_stmt =
@@ -219,7 +229,8 @@ if (!$revision_stmt) {
 
 mysqli_stmt_bind_param(
     $revision_stmt,
-    "ii",
+    "iii",
+    $companyId,
     $revision_root_id,
     $revision_root_id
 );
@@ -266,6 +277,7 @@ $client_sql = "
         id,
         company_name
     FROM clients
+    WHERE company_id = $companyId
     ORDER BY company_name ASC
 ";
 
@@ -661,7 +673,8 @@ $term_set_sql = "
         set_name,
         description
     FROM quotation_term_sets
-    WHERE is_active = 1
+    WHERE company_id = $companyId
+      AND is_active = 1
     ORDER BY set_name ASC
 ";
 
