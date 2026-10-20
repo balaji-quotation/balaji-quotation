@@ -3,9 +3,13 @@
 session_start();
 
 if (isset($_SESSION['user_id'])) {
-    $destination = strcasecmp((string)($_SESSION['user_role'] ?? ''), 'Super Admin') === 0
-        ? 'superadmin/dashboard.php'
-        : 'quotations/index.php';
+    if (strcasecmp((string)($_SESSION['user_role'] ?? ''), 'Super Admin') === 0) {
+        $destination = 'superadmin/dashboard.php';
+    } elseif (isset($_SESSION['company_id'])) {
+        $destination = 'client/dashboard.php';
+    } else {
+        $destination = 'quotations/index.php';
+    }
     header("Location: " . $destination);
     exit;
 }
