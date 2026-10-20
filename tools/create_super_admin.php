@@ -16,7 +16,7 @@ require_once __DIR__ . '/../includes/db.php';
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 $name = trim((string)getenv('SAAS_SUPERADMIN_NAME'));
-$email = strtolower(trim((string)getenv('SAAS_SUPERADMIN_EMAIL'));
+$email = strtolower(trim((string)getenv('SAAS_SUPERADMIN_EMAIL')));
 $password = (string)getenv('SAAS_SUPERADMIN_PASSWORD');
 
 if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($password) < 12) {
