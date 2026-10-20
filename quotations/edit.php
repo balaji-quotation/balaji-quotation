@@ -18,6 +18,11 @@ if (empty($_SESSION['csrf_token'])) {
 
 
 include("../includes/db.php");
+require_once __DIR__ . '/../includes/permissions.php';
+erpRequireCompanyUser($conn);
+erpRequire('quotations.edit');
+$companyId = erpCurrentCompanyId();
+$userId = (int)$_SESSION['user_id'];
 include("../includes/header.php");
 include("../includes/sidebar.php");
 
@@ -41,6 +46,8 @@ $master_sql = "
     SELECT q.*
     FROM quotations q
     WHERE q.id = ?
+      AND q.company_id = ?
+      AND q.created_by = ?
     LIMIT 1
 ";
 
@@ -50,7 +57,7 @@ if (!$master_stmt) {
     die("Quotation Load Error: " . mysqli_error($conn));
 }
 
-mysqli_stmt_bind_param($master_stmt, "i", $quotation_id);
+mysqli_stmt_bind_param($master_stmt, "iii", $quotation_id, $companyId, $userId);
 mysqli_stmt_execute($master_stmt);
 
 $master_result = mysqli_stmt_get_result($master_stmt);
@@ -80,6 +87,7 @@ $client_sql = "
         email,
         address
     FROM clients
+    WHERE company_id = $companyId
     ORDER BY company_name ASC
 ";
 
