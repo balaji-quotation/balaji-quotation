@@ -26,11 +26,11 @@ if (empty($_SESSION['csrf_token']) || $token === '' || !hash_equals($_SESSION['c
     quickClientReply(400, ['success' => false, 'message' => 'Request expired. Reload the quotation page.']);
 }
 
-$companyName = trim((string)($_POST['company_name'] ?? ''));
-$address = trim((string)($_POST['address'] ?? ''));
-$mobile = trim((string)($_POST['mobile'] ?? ''));
-$alternateMobile = trim((string)($_POST['alternate_mobile'] ?? ''));
-$email = strtolower(trim((string)($_POST['email'] ?? '')));
+$companyName = mb_substr(trim((string)($_POST['company_name'] ?? '')), 0, 255, 'UTF-8');
+$address = mb_substr(trim((string)($_POST['address'] ?? '')), 0, 5000, 'UTF-8');
+$mobile = mb_substr(trim((string)($_POST['mobile'] ?? '')), 0, 30, 'UTF-8');
+$alternateMobile = mb_substr(trim((string)($_POST['alternate_mobile'] ?? '')), 0, 30, 'UTF-8');
+$email = mb_substr(strtolower(trim((string)($_POST['email'] ?? ''))), 0, 150, 'UTF-8');
 if ($companyName === '' || $address === '' || ($mobile === '' && $alternateMobile === '')) {
     quickClientReply(422, ['success' => false, 'message' => 'Name, billing address, and mobile or alternate mobile are required.']);
 }
@@ -46,6 +46,5 @@ $stmt->bind_param('isssss', $companyId, $companyName, $email, $mobile, $alternat
 $stmt->execute();
 $id = (int)$conn->insert_id;
 $stmt->close();
-$_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 quickClientReply(201, ['success' => true, 'id' => $id, 'company_name' => $companyName]);
 ?>
