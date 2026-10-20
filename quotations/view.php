@@ -8,6 +8,10 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 include("../includes/db.php");
+require_once __DIR__ . '/../includes/permissions.php';
+erpRequireCompanyUser($conn);
+erpRequire('quotations.view');
+$companyId = erpCurrentCompanyId();
 include("../includes/header.php");
 include("../includes/sidebar.php");
 
@@ -38,6 +42,7 @@ $master_sql = "
     INNER JOIN clients c
         ON c.id = q.client_id
     WHERE q.id = ?
+      AND q.company_id = ?
     LIMIT 1
 ";
 
@@ -56,8 +61,9 @@ if (!$master_stmt) {
 
 mysqli_stmt_bind_param(
     $master_stmt,
-    "i",
-    $quotation_id
+    "ii",
+    $quotation_id,
+    $companyId
 );
 
 mysqli_stmt_execute(
