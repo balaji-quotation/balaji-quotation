@@ -59,3 +59,17 @@ Before any live migration is run:
 - Exercise legacy login and quotation create/edit/view/print/revise flows, then test two-company isolation and the rule that only a quotation's creator may edit it.
 - Confirm that no database config, credentials, SQL dump, customer data, backup, or log is staged for commit.
 - Do not run the live migration until the owner has reviewed the concrete scripts and dry-run evidence and explicitly approved execution.
+
+
+## Full PHP source pass
+
+A static pass covered all 41 committed PHP files outside the bundled `dist/` template assets at the audited baseline. It confirmed these cross-cutting concerns:
+
+- No application PHP file contains `company_id` or `tenant_id`; tenancy has not been implemented in the baseline.
+- Only the user administration pages contain route-level `erpRequire()` calls. Most routes rely on login checks and conditional sidebar links, so direct URL access bypasses the menu as an authorization boundary.
+- Quotation pages and handlers consistently check that a user is logged in. The save, update, and revision mutation handlers also validate CSRF tokens. Those controls should be retained while adding company and creator ownership checks.
+- Client and product mutation handlers do not consistently enforce HTTP method, CSRF, or permission checks. User save/update handlers have POST checks but do not show CSRF validation. These require explicit controls during the SaaS conversion.
+- Core quotation data is spread across the master quotation table and child tables for columns, rows, commercial terms, general terms, and revision lineage. All tenant checks and migration validations must cover this linked set.
+- Existing non-quotation ERP pages query operational records such as purchase orders, dispatch, production, vendors, and clients. Keep those records and tables intact through the quotation SaaS migration; do not silently delete them.
+
+The source pass does not substitute for executing the application or validating a restored database. No production database has been accessed or changed.
