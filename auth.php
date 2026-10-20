@@ -24,6 +24,21 @@ session_start();
 
 require_once __DIR__ . "/includes/db.php";
 
+$companyColumnReady = false;
+$companyColumnCheck = mysqli_prepare(
+    $conn,
+    "SELECT 1 FROM information_schema.columns
+     WHERE table_schema = DATABASE()
+       AND table_name = 'users'
+       AND column_name = 'company_id'"
+);
+if ($companyColumnCheck) {
+    mysqli_stmt_execute($companyColumnCheck);
+    mysqli_stmt_store_result($companyColumnCheck);
+    $companyColumnReady = mysqli_stmt_num_rows($companyColumnCheck) > 0;
+    mysqli_stmt_close($companyColumnCheck);
+}
+
 
 // =====================================================
 // ONLY POST REQUEST
@@ -156,6 +171,10 @@ if ($current_attempts >= $max_attempts) {
 // GET USER
 // =====================================================
 
+$companySelect = $companyColumnReady
+    ? "company_id"
+    : "NULL AS company_id";
+
 $stmt = mysqli_prepare(
     $conn,
     "
@@ -165,7 +184,8 @@ $stmt = mysqli_prepare(
         email,
         password,
         role,
-        status
+        status,
+        {$companySelect}
     FROM users
     WHERE LOWER(email) = ?
     LIMIT 1
@@ -408,6 +428,46 @@ if (!$password_ok) {
 
 
 // =====================================================
+// COMPANY ACCOUNT STATUS
+// =====================================================
+
+$loginRole = trim((string)($user['role'] ?? 'User'));
+$loginCompanyId = isset($user['company_id'])
+    ? (int)$user['company_id']
+    : 0;
+
+if ($companyColumnReady && strcasecmp($loginRole, 'Super Admin') !== 0) {
+    if ($loginCompanyId <= 0) {
+        header("Location: login.php?error=1");
+        exit;
+    }
+
+    $companyStatusStmt = mysqli_prepare(
+        $conn,
+        "SELECT status FROM companies WHERE id = ? LIMIT 1"
+    );
+    if (!$companyStatusStmt) {
+        error_log("Company status check could not be prepared.");
+        header("Location: login.php?error=1");
+        exit;
+    }
+    mysqli_stmt_bind_param($companyStatusStmt, "i", $loginCompanyId);
+    mysqli_stmt_execute($companyStatusStmt);
+    $companyStatusResult = mysqli_stmt_get_result($companyStatusStmt);
+    $companyStatusRow = mysqli_fetch_assoc($companyStatusResult);
+    mysqli_stmt_close($companyStatusStmt);
+
+    if (!$companyStatusRow || $companyStatusRow['status'] !== 'Active') {
+        header("Location: login.php?error=1");
+        exit;
+    }
+} elseif (strcasecmp($loginRole, 'Super Admin') === 0 && $loginCompanyId !== 0) {
+    header("Location: login.php?error=1");
+    exit;
+}
+
+
+// =====================================================
 // PASSWORD REHASH
 // =====================================================
 
@@ -519,6 +579,11 @@ $_SESSION['user_email'] =
 $_SESSION['user_role'] =
     $user['role'] ?? 'User';
 
+$_SESSION['company_id'] =
+    strcasecmp($loginRole, 'Super Admin') === 0
+        ? null
+        : ($loginCompanyId > 0 ? $loginCompanyId : null);
+
 $_SESSION['login_time'] =
     time();
 
@@ -526,6 +591,11 @@ $_SESSION['login_time'] =
 // =====================================================
 // REDIRECT
 // =====================================================
+
+if (strcasecmp($loginRole, 'Super Admin') === 0) {
+    header("Location: superadmin/dashboard.php");
+    exit;
+}
 
 header("Location: quotations/index.php");
 exit;
