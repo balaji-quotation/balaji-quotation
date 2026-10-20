@@ -14,6 +14,10 @@ function erpNormalizeRole($role)
 {
     $role = trim((string)$role);
 
+    if (strcasecmp($role, 'Super Admin') === 0) {
+        return 'Super Admin';
+    }
+
     if (
         strcasecmp($role, 'Admin') === 0 ||
         strcasecmp($role, 'Administrator') === 0
@@ -54,6 +58,25 @@ function erpCurrentRole()
     return erpNormalizeRole(
         $_SESSION['user_role'] ?? 'User'
     );
+}
+
+function erpIsSuperAdmin()
+{
+    return erpCurrentRole() === 'Super Admin';
+}
+
+function erpCurrentCompanyId()
+{
+    $companyId = $_SESSION['company_id'] ?? null;
+    return $companyId === null ? null : (int)$companyId;
+}
+
+function erpRequireCompanyUser()
+{
+    if (!isset($_SESSION['user_id']) || erpIsSuperAdmin() || erpCurrentCompanyId() === null) {
+        http_response_code(403);
+        exit('Company account required.');
+    }
 }
 
 
@@ -365,6 +388,46 @@ function erpPermissionMap()
 
         'system.settings' => [
             'Administrator'
+        ],
+
+        // =================================================
+        // SUPER ADMIN
+        // =================================================
+
+        'superadmin.dashboard' => [
+            'Super Admin'
+        ],
+
+        'companies.view' => [
+            'Super Admin'
+        ],
+
+        'companies.add' => [
+            'Super Admin'
+        ],
+
+        'companies.edit' => [
+            'Super Admin'
+        ],
+
+        'companies.status' => [
+            'Super Admin'
+        ],
+
+        'superadmin.users' => [
+            'Super Admin'
+        ],
+
+        'superadmin.templates' => [
+            'Super Admin'
+        ],
+
+        'superadmin.change_requests' => [
+            'Super Admin'
+        ],
+
+        'superadmin.subscriptions' => [
+            'Super Admin'
         ]
     ];
 }
