@@ -73,3 +73,16 @@ A static pass covered all 41 committed PHP files outside the bundled `dist/` tem
 - Existing non-quotation ERP pages query operational records such as purchase orders, dispatch, production, vendors, and clients. Keep those records and tables intact through the quotation SaaS migration; do not silently delete them.
 
 The source pass does not substitute for executing the application or validating a restored database. No production database has been accessed or changed.
+
+
+## Development implementation status
+
+The development branch now contains the additive migration/preflight tooling, tenant company master and admin bootstrap, company status checks, approved client/admin navigation, company dashboard/profile/change-request routes, tenant and creator filters on the main quotation read/write/revision paths, and company-scoped customer CRUD. Quotation entry also has a CSRF-protected inline customer quick-add flow; it requires a name, billing address, and one of mobile or alternate mobile, then selects the saved customer in the open quotation. The migration adds alternate mobile as a nullable customer field only when absent.
+
+The live database migration and Super Admin bootstrap have not been executed. No database connection or project runtime was available for PHP linting or MySQL regression tests. The CLI migration is still a draft until it has passed a restored-backup dry run and manual review.
+
+Remaining implementation gates before deployment:
+- Complete the Super Admin quotation-template assignment/catalog and subscription-management routes from the detailed handover behavior; no billing or plan rules are inferred here.
+- Finish the direct-URL permission and tenant review across legacy ERP routes outside the approved client menu, including any product-management endpoints.
+- Run PHP 8.2 lint and the quotation/tenant-isolation regression suite against a restored database, compare all table row counts and quotation relationships, and inspect the migration's implicit-DDL recovery behavior.
+- Review the final migration and dry-run evidence with the owner and obtain explicit approval before running it against the live database.
