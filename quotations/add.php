@@ -18,6 +18,10 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 include("../includes/db.php");
+require_once __DIR__ . '/../includes/permissions.php';
+erpRequireCompanyUser($conn);
+erpRequire('quotations.add');
+$companyId = erpCurrentCompanyId();
 include("../includes/header.php");
 include("../includes/sidebar.php");
 
@@ -33,6 +37,7 @@ $client_sql = "
         id,
         company_name
     FROM clients
+    WHERE company_id = $companyId
     ORDER BY company_name ASC
 ";
 
@@ -73,6 +78,7 @@ $product_sql = "
         product_name,
         part_number
     FROM products
+    WHERE company_id = $companyId
     ORDER BY product_name ASC
 ";
 
@@ -109,6 +115,7 @@ $quotation_prefix =
 $setting_sql = "
     SELECT quotation_prefix
     FROM quotation_company_settings
+    WHERE company_id = $companyId
     ORDER BY id ASC
     LIMIT 1
 ";
@@ -190,6 +197,7 @@ $next_sql = "
             0
         ) + 1 AS next_id
     FROM quotations
+    WHERE company_id = $companyId
 ";
 
 $next_result =
@@ -238,7 +246,8 @@ $term_set_sql = "
         set_name,
         description
     FROM quotation_term_sets
-    WHERE is_active = 1
+    WHERE company_id = $companyId
+      AND is_active = 1
     ORDER BY set_name ASC
 ";
 
