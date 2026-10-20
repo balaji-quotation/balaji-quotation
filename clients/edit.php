@@ -8,6 +8,10 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 include("../includes/db.php");
+require_once __DIR__ . "/../includes/permissions.php";
+erpRequireCompanyUser($conn);
+erpRequire('clients.edit');
+$companyId = erpCurrentCompanyId();
 
 
 // =====================================================
@@ -28,13 +32,14 @@ if ($id <= 0) {
 
 $stmt = mysqli_prepare(
     $conn,
-    "SELECT * FROM clients WHERE id = ? LIMIT 1"
+    "SELECT * FROM clients WHERE id = ? AND company_id = ? LIMIT 1"
 );
 
 mysqli_stmt_bind_param(
     $stmt,
-    "i",
-    $id
+    "ii",
+    $id,
+    $companyId
 );
 
 mysqli_stmt_execute($stmt);
@@ -196,6 +201,7 @@ include("../includes/sidebar.php");
     method="POST"
     autocomplete="off"
 >
+<input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
 
 <input
     type="hidden"
