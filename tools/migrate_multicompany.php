@@ -111,6 +111,10 @@ if ($missing) {
     fwrite(STDERR, 'Preflight failed; required legacy tables are missing: ' . implode(', ', $missing) . "\n");
     exit(3);
 }
+if (!migrationColumnExists($conn, 'clients', 'alternate_mobile')) {
+    echo "Preflight note: clients.alternate_mobile will be added as a nullable field. Existing customer rows are not rewritten.\n";
+}
+
 if (!migrationColumnExists($conn, 'quotation_company_settings', 'company_name')) {
     fwrite(STDERR, "Preflight failed; quotation_company_settings.company_name is missing.\n");
     exit(3);
@@ -205,6 +209,10 @@ try {
                 ON DELETE RESTRICT
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
+
+    if (!migrationColumnExists($conn, 'clients', 'alternate_mobile')) {
+        $conn->query("ALTER TABLE clients ADD COLUMN alternate_mobile VARCHAR(30) DEFAULT NULL");
+    }
 
     foreach ($requiredTables as $table) {
         migrationAddTenantColumn($conn, $table);
