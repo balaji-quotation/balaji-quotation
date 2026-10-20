@@ -1,0 +1,52 @@
+# =====================================================
+# ERP SECURITY
+# =====================================================
+
+Options -Indexes
+DirectoryIndex index.php
+
+# =====================================================
+# BLOCK SENSITIVE FILES
+# =====================================================
+<FilesMatch "^(db\.php|permissions\.php|composer\.(json|lock)|\.env|\.git|\.htaccess)$">
+    Require all denied
+</FilesMatch>
+
+# =====================================================
+# BLOCK BACKUP / CONFIG / DUMP FILES
+# =====================================================
+<FilesMatch "\.(bak|backup|old|sql|log|ini|env|dist)$">
+    Require all denied
+</FilesMatch>
+
+# =====================================================
+# BASIC SECURITY HEADERS
+# =====================================================
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# =====================================================
+# PROTECT HIDDEN FILES
+# =====================================================
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# =====================================================
+# CUSTOM ERP 404
+# =====================================================
+ErrorDocument 404 /quotation/404.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Existing files and folders continue normally.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # Force Apache 404 so ErrorDocument handles the response.
+    RewriteRule ^ - [R=404,L]
+</IfModule>

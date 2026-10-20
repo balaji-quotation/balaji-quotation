@@ -1,0 +1,33 @@
+
+# Database credentials
+.env
+.env.*
+!.env.example
+includes/db.php
+
+# Backups and database exports
+backup/
+*.sql
+*.sql.gz
+*.zip
+*.bak
+
+# Customer uploads and logs
+uploads/
+error_log
+*.log
+
+# Local and system files
+.DS_Store
+phpinfo.php
+
+# Additional private and testing files
+README-LOCAL-LOGIN.txt
+README-INSTALL.txt
+test.php
+quick_work_api.php
+quotations/assets/unicorn-stamp-signature.png
+
+# Old backup files
+clients/indexbackup.php
+dist/index_backup.html
