@@ -8,6 +8,11 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 include("../includes/db.php");
+require_once __DIR__ . '/../includes/permissions.php';
+erpRequireCompanyUser($conn);
+erpRequire('quotations.edit');
+$companyId = erpCurrentCompanyId();
+$userId = (int)$_SESSION['user_id'];
 
 
 // =====================================================
@@ -213,6 +218,8 @@ $stmt = mysqli_prepare(
         SELECT id
         FROM quotations
         WHERE id = ?
+          AND company_id = ?
+          AND created_by = ?
         LIMIT 1
     "
 );
@@ -226,8 +233,10 @@ if (!$stmt) {
 
 mysqli_stmt_bind_param(
     $stmt,
-    "i",
-    $quotation_id
+    "iii",
+    $quotation_id,
+    $companyId,
+    $userId
 );
 
 mysqli_stmt_execute($stmt);
@@ -256,6 +265,7 @@ $stmt = mysqli_prepare(
         SELECT id
         FROM clients
         WHERE id = ?
+          AND company_id = ?
         LIMIT 1
     "
 );
@@ -270,7 +280,8 @@ if (!$stmt) {
 mysqli_stmt_bind_param(
     $stmt,
     "i",
-    $client_id
+    $client_id,
+    $companyId
 );
 
 mysqli_stmt_execute($stmt);
@@ -305,6 +316,7 @@ $stmt = mysqli_prepare(
         WHERE
             quotation_no = ?
             AND id <> ?
+            AND company_id = ?
         LIMIT 1
     "
 );
@@ -318,9 +330,10 @@ if (!$stmt) {
 
 mysqli_stmt_bind_param(
     $stmt,
-    "si",
+    "sii",
     $quotation_no,
-    $quotation_id
+    $quotation_id,
+    $companyId
 );
 
 mysqli_stmt_execute($stmt);
@@ -737,6 +750,8 @@ try {
             status = ?,
             remarks = ?
         WHERE id = ?
+          AND company_id = ?
+          AND created_by = ?
     ";
 
     $stmt =
@@ -754,7 +769,7 @@ try {
 
     mysqli_stmt_bind_param(
         $stmt,
-        "sissssssssi",
+        "sissssssssiii",
         $quotation_no,
         $client_id,
         $rfq_no,
@@ -765,7 +780,9 @@ try {
         $validity_text,
         $status,
         $remarks,
-        $quotation_id
+        $quotation_id,
+        $companyId,
+        $userId
     );
 
     if (
