@@ -785,7 +785,7 @@ try {
             ) + 1 AS next_revision
         FROM quotations
         WHERE company_id = ?
-          AND (id = ? OR revision_of_quotation_id = ?
+          AND (id = ? OR revision_of_quotation_id = ?)
     ";
 
     $next_revision_stmt =
