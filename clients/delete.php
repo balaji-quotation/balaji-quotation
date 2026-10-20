@@ -8,6 +8,10 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 require_once __DIR__ . "/../includes/db.php";
+require_once __DIR__ . "/../includes/permissions.php";
+erpRequireCompanyUser($conn);
+erpRequire('clients.delete');
+$companyId = erpCurrentCompanyId();
 
 
 // =====================================================
@@ -61,6 +65,7 @@ $client_stmt = mysqli_prepare(
     SELECT id
     FROM clients
     WHERE id = ?
+      AND company_id = ?
     LIMIT 1
     "
 );
@@ -78,8 +83,9 @@ if (!$client_stmt) {
 
 mysqli_stmt_bind_param(
     $client_stmt,
-    "i",
-    $id
+    "ii",
+    $id,
+    $companyId
 );
 
 mysqli_stmt_execute($client_stmt);
@@ -161,6 +167,7 @@ $delete_stmt = mysqli_prepare(
     "
     DELETE FROM clients
     WHERE id = ?
+      AND company_id = ?
     LIMIT 1
     "
 );
