@@ -9,6 +9,11 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+if (strcasecmp((string)($_SESSION['user_role'] ?? ''), 'Super Admin') === 0) {
+    header("Location: superadmin/dashboard.php");
+    exit;
+}
+
 include("includes/db.php");
 include("includes/header.php");
 include("includes/sidebar.php");
