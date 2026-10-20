@@ -35,11 +35,11 @@ foreach (array_slice($argv, 1) as $arg) {
     }
 }
 if (($backupVerified || $maintenanceConfirmed) && !$apply) {
-    fwrite(STDERR, "Apply-only safety flags require --apply.\\n");
+    fwrite(STDERR, "Apply-only safety flags require --apply.\n");
     exit(2);
 }
 if ($apply && (!$backupVerified || !$maintenanceConfirmed)) {
-    fwrite(STDERR, "Refusing to apply: require --backup-verified and --maintenance-confirmed after owner approval, a verified restorable backup, and maintenance mode.\\n");
+    fwrite(STDERR, "Refusing to apply: require --backup-verified and --maintenance-confirmed after owner approval, a verified restorable backup, and maintenance mode.\n");
     exit(2);
 }
 
@@ -143,7 +143,7 @@ echo 'MySQL/MariaDB: ' . $dbInfo['db_version'] . "\n";
 echo "Initial company source: quotation_company_settings row 1 (company details are not printed)\n";
 echo "Existing tenant mapping: all current rows in the selected tenant tables map to the initial company.\n";
 echo "Legacy tables and primary keys will be retained. No quotation rows, IDs, numbers, or revision links are rewritten.\n";
-echo "Current database table row counts (metadata only; no row contents):\\n";
+echo "Current database table row counts (metadata only; no row contents):\n";
 $tableList = $conn->query(
     "SELECT table_name FROM information_schema.tables
      WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'
@@ -154,10 +154,10 @@ while ($tableRow = $tableList->fetch_assoc()) {
     if (!preg_match('/^[A-Za-z0-9_]+$/', $tableName)) {
         throw new RuntimeException('Unexpected table name in metadata.');
     }
-    echo '  ' . $tableName . ': ' . migrationCount($conn, $tableName) . "\\n";
+    echo '  ' . $tableName . ': ' . migrationCount($conn, $tableName) . "\n";
 }
-echo "Planned tenant columns: users, clients, products, quotations, quotation_term_sets, quotation_company_settings, activity_log.\\n";
-echo "No application writes may run concurrently with apply; use a maintenance window and verified restorable backup.\\n";
+echo "Planned tenant columns: users, clients, products, quotations, quotation_term_sets, quotation_company_settings, activity_log.\n";
+echo "No application writes may run concurrently with apply; use a maintenance window and verified restorable backup.\n";
 if (!$apply) {
     echo "DRY RUN ONLY. No schema or data changes were made.\n";
     echo "After code review, a successful restored-backup dry run, and explicit owner approval, run with --apply --backup-verified --maintenance-confirmed.\n";
