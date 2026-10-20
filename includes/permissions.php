@@ -71,11 +71,35 @@ function erpCurrentCompanyId()
     return $companyId === null ? null : (int)$companyId;
 }
 
-function erpRequireCompanyUser()
+function erpRequireCompanyUser($database = null)
 {
     if (!isset($_SESSION['user_id']) || erpIsSuperAdmin() || erpCurrentCompanyId() === null) {
         http_response_code(403);
         exit('Company account required.');
+    }
+
+    if ($database === null) {
+        $database = $GLOBALS['conn'] ?? null;
+    }
+    if (!$database instanceof mysqli) {
+        http_response_code(503);
+        exit('Company access could not be verified.');
+    }
+
+    $companyId = erpCurrentCompanyId();
+    $stmt = $database->prepare('SELECT status FROM companies WHERE id = ? LIMIT 1');
+    $stmt->bind_param('i', $companyId);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$row || $row['status'] !== 'Active') {
+        $_SESSION = [];
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_destroy();
+        }
+        header('Location: /quotation/login.php?error=company');
+        exit;
     }
 }
 
