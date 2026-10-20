@@ -184,6 +184,28 @@ try {
     $stmt->execute();
     $stmt->close();
 
+    $conn->query(
+        "CREATE TABLE IF NOT EXISTS template_change_requests (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            company_id INT UNSIGNED NOT NULL,
+            requested_by INT NOT NULL,
+            title VARCHAR(200) NOT NULL,
+            details TEXT NOT NULL,
+            status ENUM('Pending','In Review','Approved','Rejected','Completed') NOT NULL DEFAULT 'Pending',
+            admin_note TEXT DEFAULT NULL,
+            reviewed_by INT DEFAULT NULL,
+            reviewed_at DATETIME DEFAULT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_template_requests_company (company_id, status, created_at),
+            KEY idx_template_requests_status (status),
+            CONSTRAINT fk_template_requests_company
+                FOREIGN KEY (company_id) REFERENCES companies (id)
+                ON DELETE RESTRICT
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+
     foreach ($requiredTables as $table) {
         migrationAddTenantColumn($conn, $table);
     }
