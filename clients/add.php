@@ -8,6 +8,12 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 include("../includes/db.php");
+require_once __DIR__ . "/../includes/permissions.php";
+erpRequireCompanyUser($conn);
+erpRequire('clients.add');
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 include("../includes/header.php");
 include("../includes/sidebar.php");
 
@@ -147,6 +153,7 @@ include("../includes/sidebar.php");
     method="POST"
     autocomplete="off"
 >
+<input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
 
 
 <div class="client-section-title mb-3">
