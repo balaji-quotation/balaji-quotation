@@ -9,7 +9,7 @@ declare(strict_types=1);
  *
  * Usage:
  *   php tools/migrate_multicompany.php
- *   php tools/migrate_multicompany.php --apply --backup-verified
+ *   php tools/migrate_multicompany.php --apply --backup-verified --maintenance-confirmed
  */
 if (PHP_SAPI !== 'cli') {
     http_response_code(404);
@@ -26,7 +26,8 @@ mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 $apply = in_array('--apply', $argv, true);
 $backupVerified = in_array('--backup-verified', $argv, true);
-$allowedArgs = ['--apply', '--backup-verified'];
+$maintenanceConfirmed = in_array('--maintenance-confirmed', $argv, true);
+$allowedArgs = ['--apply', '--backup-verified', '--maintenance-confirmed'];
 foreach (array_slice($argv, 1) as $arg) {
     if (!in_array($arg, $allowedArgs, true)) {
         fwrite(STDERR, "Unknown option: {$arg}\n");
@@ -240,6 +241,14 @@ try {
         $stmt->bind_param('i', $legacyCompanyId);
         $stmt->execute();
         $stmt->close();
+    }
+
+    foreach (array_merge(['users'], array_values(array_diff($requiredTables, ['users']))) as $table) {
+        $check = $conn->query("SELECT COUNT(*) AS n FROM `{$table}` WHERE company_id IS NULL");
+        $nullOwners = (int)($check->fetch_assoc()['n'] ?? 0);
+        if ($nullOwners !== 0) {
+            throw new RuntimeException("Tenant backfill incomplete for table {$table}.");
+        }
     }
 
     $conn->commit();
