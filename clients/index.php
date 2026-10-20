@@ -26,6 +26,10 @@ if (empty($_SESSION['csrf_token'])) {
 // =====================================================
 
 require_once __DIR__ . "/../includes/db.php";
+require_once __DIR__ . "/../includes/permissions.php";
+erpRequireCompanyUser($conn);
+erpRequire('clients.view');
+$companyId = erpCurrentCompanyId();
 
 include("../includes/header.php");
 include("../includes/sidebar.php");
@@ -46,14 +50,18 @@ $sql = "
         address,
         status
     FROM clients
+    WHERE company_id = ?
     ORDER BY id DESC
 ";
 
-$result =
-    mysqli_query(
-        $conn,
-        $sql
-    );
+$stmt = mysqli_prepare($conn, $sql);
+if (!$stmt) {
+    error_log("Clients index prepare error: " . mysqli_error($conn));
+    die("Unable to load clients.");
+}
+mysqli_stmt_bind_param($stmt, "i", $companyId);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
 
 
 if (!$result) {
