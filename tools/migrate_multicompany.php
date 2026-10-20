@@ -34,12 +34,12 @@ foreach (array_slice($argv, 1) as $arg) {
         exit(2);
     }
 }
-if ($backupVerified && !$apply) {
-    fwrite(STDERR, "--backup-verified is only valid together with --apply.\n");
+if (($backupVerified || $maintenanceConfirmed) && !$apply) {
+    fwrite(STDERR, "Apply-only safety flags require --apply.\\n");
     exit(2);
 }
-if ($apply && !$backupVerified) {
-    fwrite(STDERR, "Refusing to apply: pass --backup-verified only after the owner has approved and verified a restorable backup.\n");
+if ($apply && (!$backupVerified || !$maintenanceConfirmed)) {
+    fwrite(STDERR, "Refusing to apply: require --backup-verified and --maintenance-confirmed after owner approval, a verified restorable backup, and maintenance mode.\\n");
     exit(2);
 }
 
@@ -71,7 +71,7 @@ function migrationColumnExists(mysqli $db, string $table, string $column): bool
 
 function migrationCount(mysqli $db, string $table): int
 {
-    if (!preg_match('/^[a-z_]+$/', $table)) {
+    if (!preg_match('/^[A-Za-z0-9_]+$/', $table)) {
         throw new RuntimeException('Unexpected table identifier.');
     }
     $result = $db->query("SELECT COUNT(*) AS n FROM `{$table}`");
@@ -143,14 +143,24 @@ echo 'MySQL/MariaDB: ' . $dbInfo['db_version'] . "\n";
 echo "Initial company source: quotation_company_settings row 1 (company details are not printed)\n";
 echo "Existing tenant mapping: all current rows in the selected tenant tables map to the initial company.\n";
 echo "Legacy tables and primary keys will be retained. No quotation rows, IDs, numbers, or revision links are rewritten.\n";
-echo "Current row counts (metadata only):\n";
-foreach ($requiredTables as $table) {
-    echo '  ' . $table . ': ' . migrationCount($conn, $table) . "\n";
+echo "Current database table row counts (metadata only; no row contents):\\n";
+$tableList = $conn->query(
+    "SELECT table_name FROM information_schema.tables
+     WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'
+     ORDER BY table_name"
+);
+while ($tableRow = $tableList->fetch_assoc()) {
+    $tableName = (string)$tableRow['table_name'];
+    if (!preg_match('/^[A-Za-z0-9_]+$/', $tableName)) {
+        throw new RuntimeException('Unexpected table name in metadata.');
+    }
+    echo '  ' . $tableName . ': ' . migrationCount($conn, $tableName) . "\\n";
 }
-echo "Planned tenant columns: users, clients, products, quotations, quotation_term_sets, quotation_company_settings, activity_log.\n";
+echo "Planned tenant columns: users, clients, products, quotations, quotation_term_sets, quotation_company_settings, activity_log.\\n";
+echo "No application writes may run concurrently with apply; use a maintenance window and verified restorable backup.\\n";
 if (!$apply) {
     echo "DRY RUN ONLY. No schema or data changes were made.\n";
-    echo "After code review, a successful restored-backup dry run, and explicit owner approval, run with --apply --backup-verified.\n";
+    echo "After code review, a successful restored-backup dry run, and explicit owner approval, run with --apply --backup-verified --maintenance-confirmed.\n";
     exit(0);
 }
 
