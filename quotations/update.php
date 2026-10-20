@@ -279,7 +279,7 @@ if (!$stmt) {
 
 mysqli_stmt_bind_param(
     $stmt,
-    "i",
+    "ii",
     $client_id,
     $companyId
 );
