@@ -8,6 +8,11 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 include("../includes/db.php");
+require_once __DIR__ . "/../includes/permissions.php";
+erpRequireCompanyUser($conn);
+erpRequire("quotations.edit");
+$companyId = erpCurrentCompanyId();
+$userId = (int)$_SESSION["user_id"];
 
 
 // =====================================================
@@ -646,6 +651,26 @@ foreach (
 
 
 // =====================================================
+// TENANT-OWNED CLIENT CHECK
+// =====================================================
+
+$clientCheck = mysqli_prepare(
+    $conn,
+    "SELECT id FROM clients WHERE id = ? AND company_id = ? LIMIT 1"
+);
+if (!$clientCheck) {
+    revisionFail("Unable to validate selected client.", $source_quotation_id);
+}
+mysqli_stmt_bind_param($clientCheck, "ii", $client_id, $companyId);
+mysqli_stmt_execute($clientCheck);
+$clientResult = mysqli_stmt_get_result($clientCheck);
+$clientExists = $clientResult && mysqli_num_rows($clientResult) === 1;
+mysqli_stmt_close($clientCheck);
+if (!$clientExists) {
+    revisionFail("Selected client was not found.", $source_quotation_id);
+}
+
+
 // TRANSACTION
 // =====================================================
 
@@ -666,6 +691,8 @@ try {
             revision_of_quotation_id
         FROM quotations
         WHERE id = ?
+          AND company_id = ?
+          AND created_by = ?
         LIMIT 1
     ";
 
@@ -683,8 +710,10 @@ try {
 
     mysqli_stmt_bind_param(
         $verify_stmt,
-        "i",
-        $source_quotation_id
+        "iii",
+        $source_quotation_id,
+        $companyId,
+        $userId
     );
 
     mysqli_stmt_execute(
@@ -755,9 +784,8 @@ try {
                 0
             ) + 1 AS next_revision
         FROM quotations
-        WHERE
-            id = ?
-            OR revision_of_quotation_id = ?
+        WHERE company_id = ?
+          AND (id = ? OR revision_of_quotation_id = ?
     ";
 
     $next_revision_stmt =
@@ -774,7 +802,8 @@ try {
 
     mysqli_stmt_bind_param(
         $next_revision_stmt,
-        "ii",
+        "iii",
+        $companyId,
         $revision_root_id,
         $revision_root_id
     );
@@ -825,6 +854,7 @@ try {
         SELECT id
         FROM quotations
         WHERE quotation_no = ?
+          AND company_id = ?
         LIMIT 1
     ";
 
@@ -842,8 +872,9 @@ try {
 
     mysqli_stmt_bind_param(
         $duplicate_stmt,
-        "s",
-        $quotation_no
+        "si",
+        $quotation_no,
+        $companyId
     );
 
     mysqli_stmt_execute(
@@ -893,6 +924,7 @@ try {
             validity_text,
             status,
             remarks,
+            company_id,
             copied_from_quotation_id,
             revision_of_quotation_id,
             revision_no,
@@ -900,6 +932,7 @@ try {
         )
         VALUES
         (
+            ?,
             ?,
             ?,
             ?,
@@ -933,7 +966,7 @@ try {
 
     mysqli_stmt_bind_param(
         $master_stmt,
-        "sissssssssiiii",
+        "sissssssssiiiii",
         $quotation_no,
         $client_id,
         $rfq_no,
@@ -944,6 +977,7 @@ try {
         $validity_text,
         $status,
         $remarks,
+        $companyId,
         $source_quotation_id,
         $revision_root_id,
         $revision_no,
@@ -1385,6 +1419,8 @@ try {
         UPDATE quotations
         SET status = 'Revised'
         WHERE id = ?
+          AND company_id = ?
+          AND created_by = ?
     ";
 
     $source_update_stmt =
@@ -1403,8 +1439,10 @@ try {
 
     mysqli_stmt_bind_param(
         $source_update_stmt,
-        "i",
-        $source_quotation_id
+        "iii",
+        $source_quotation_id,
+        $companyId,
+        $userId
     );
 
 
