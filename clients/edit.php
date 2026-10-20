@@ -12,6 +12,9 @@ require_once __DIR__ . "/../includes/permissions.php";
 erpRequireCompanyUser($conn);
 erpRequire('clients.edit');
 $companyId = erpCurrentCompanyId();
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 
 
 // =====================================================
