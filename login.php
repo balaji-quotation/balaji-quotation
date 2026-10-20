@@ -3,7 +3,10 @@
 session_start();
 
 if (isset($_SESSION['user_id'])) {
-    header("Location: quotations/index.php");
+    $destination = strcasecmp((string)($_SESSION['user_role'] ?? ''), 'Super Admin') === 0
+        ? 'superadmin/dashboard.php'
+        : 'quotations/index.php';
+    header("Location: " . $destination);
     exit;
 }
 
