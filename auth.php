@@ -597,6 +597,11 @@ if (strcasecmp($loginRole, 'Super Admin') === 0) {
     exit;
 }
 
+if ($loginCompanyId > 0) {
+    header("Location: client/dashboard.php");
+    exit;
+}
+
 header("Location: quotations/index.php");
 exit;
 ?>
