@@ -35,7 +35,7 @@ unset($target);
             <div class="row">
                 <div class="col-md-4"><div class="card"><div class="card-body"><h5>Companies</h5><h2><?= $companyCount ?></h2><a href="companies/index.php">Manage companies</a></div></div></div>
                 <div class="col-md-4"><div class="card"><div class="card-body"><h5>Users</h5><h2><?= $userCount ?></h2><a href="users/index.php">Manage users</a></div></div></div>
-                <div class="col-md-4"><div class="card"><div class="card-body"><h5>Quotations</h5><h2><?= $quotationCount ?></h2><a href="../quotations/index.php">View quotations</a></div></div></div>
+                <div class="col-md-4"><div class="card"><div class="card-body"><h5>Quotations</h5><h2><?= $quotationCount ?></h2><span class="text-muted">Across all companies</span></div></div></div>
             </div>
         </div>
     </div>
