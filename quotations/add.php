@@ -708,6 +708,21 @@ $term_sets_json =
 <?php } ?>
 
 </select>
+<button type="button" class="btn btn-sm btn-outline-primary mt-2" id="toggleQuickClient">+ Quick add customer</button>
+<div class="border rounded p-2 mt-2" id="quickClientPanel" style="display:none;">
+    <div class="small fw-bold mb-2">Quick add customer</div>
+    <input type="text" id="quickClientName" class="form-control form-control-sm mb-2" placeholder="Customer / company name *" maxlength="255">
+    <textarea id="quickClientAddress" class="form-control form-control-sm mb-2" placeholder="Billing address *" rows="2"></textarea>
+    <div class="row g-2">
+        <div class="col-6"><input type="text" id="quickClientMobile" class="form-control form-control-sm" placeholder="Mobile" maxlength="30"></div>
+        <div class="col-6"><input type="text" id="quickClientAltMobile" class="form-control form-control-sm" placeholder="Alternate mobile" maxlength="30"></div>
+    </div>
+    <input type="email" id="quickClientEmail" class="form-control form-control-sm mt-2" placeholder="Email (optional)" maxlength="150">
+    <div id="quickClientMessage" class="small mt-2" role="status"></div>
+    <button type="button" class="btn btn-sm btn-primary mt-2" id="saveQuickClient">Save and select</button>
+    <button type="button" class="btn btn-sm btn-light mt-2" id="cancelQuickClient">Cancel</button>
+</div>
+
 
 </div>
 
@@ -715,7 +730,6 @@ $term_sets_json =
 <div class="col-xl-2 col-lg-4 col-md-6">
 
 <label class="quote-form-label">
-    RFQ No.
 </label>
 
 <input
@@ -2400,6 +2414,54 @@ document.addEventListener(
 
 </script>
 
+
+<script>
+(function () {
+    var panel = document.getElementById('quickClientPanel');
+    var toggle = document.getElementById('toggleQuickClient');
+    var message = document.getElementById('quickClientMessage');
+    var selector = document.querySelector('select[name="client_id"]');
+    if (!panel || !toggle || !selector) return;
+    toggle.addEventListener('click', function () { panel.style.display = panel.style.display === 'none' ? 'block' : 'none'; });
+    document.getElementById('cancelQuickClient').addEventListener('click', function () { panel.style.display = 'none'; });
+    document.getElementById('saveQuickClient').addEventListener('click', async function () {
+        var name = document.getElementById('quickClientName').value.trim();
+        var address = document.getElementById('quickClientAddress').value.trim();
+        var mobile = document.getElementById('quickClientMobile').value.trim();
+        var alternateMobile = document.getElementById('quickClientAltMobile').value.trim();
+        var email = document.getElementById('quickClientEmail').value.trim();
+        message.className = 'small mt-2 text-danger';
+        if (!name || !address || (!mobile && !alternateMobile)) {
+            message.textContent = 'Name, billing address, and mobile or alternate mobile are required.';
+            return;
+        }
+        var body = new URLSearchParams({
+            csrf_token: <?= json_encode($_SESSION['csrf_token']); ?>,
+            company_name: name, address: address, mobile: mobile,
+            alternate_mobile: alternateMobile, email: email
+        });
+        this.disabled = true;
+        try {
+            var response = await fetch('../clients/quick_save.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'Accept': 'application/json'},
+                body: body.toString(), credentials: 'same-origin'
+            });
+            var result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.message || 'Customer could not be saved.');
+            selector.add(new Option(result.company_name, result.id, true, true));
+            selector.value = String(result.id);
+            panel.style.display = 'none';
+            ['quickClientName','quickClientAddress','quickClientMobile','quickClientAltMobile','quickClientEmail'].forEach(function (id) { document.getElementById(id).value = ''; });
+            message.textContent = '';
+        } catch (error) {
+            message.textContent = error.message || 'Customer could not be saved.';
+        } finally {
+            this.disabled = false;
+        }
+    });
+})();
+</script>
 
 <?php
 include("../includes/footer.php");
