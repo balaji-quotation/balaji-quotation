@@ -160,12 +160,21 @@ function erpPermissionMap()
         'clients.view' => [
             'Administrator',
             'Manager',
-            'Accounts'
+            'Production',
+            'Quality',
+            'Dispatch',
+            'Accounts',
+            'User'
         ],
 
         'clients.add' => [
             'Administrator',
-            'Manager'
+            'Manager',
+            'Production',
+            'Quality',
+            'Dispatch',
+            'Accounts',
+            'User'
         ],
 
         'clients.edit' => [
