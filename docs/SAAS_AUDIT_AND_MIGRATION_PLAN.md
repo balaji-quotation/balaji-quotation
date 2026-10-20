@@ -52,13 +52,13 @@ Before any live migration is run:
 
 - Confirm the target database identity and engine/version without logging credentials.
 - Verify that the supplied backup can be restored to a separate test database; record backup timestamp, size, and checksum outside Git.
-- Record row counts for every table and a schema/foreign-key/index inventory. Do not export customer row contents into reports or commits.
+- Record row counts for every table and a schema/foreign-key/index inventory. The CLI preflight now prints row counts for all base tables using metadata-only counts; do not export customer row contents into reports or commits.
 - Confirm a deterministic mapping of all existing users, customers, products, quotations, quotation child rows, terms, activity, and revision chains to the initial company. Stop if any row has no unambiguous owner.
-- Run the migration on a restored copy first. Check it is repeat-safe or fails safely before applying any mutation, and test interruption/rollback behavior.
+- Run the migration on a restored copy first. Check it is repeat-safe or fails safely before applying any mutation, and test interruption/rollback behavior. The apply command also requires an explicit maintenance-mode confirmation, and it refuses to commit unless all tenant-owned rows have a non-NULL company mapping.
 - Compare every table's row count and primary-key set before and after. Validate quotation numbers, totals, child rows, terms, revision parent links, customer links, and foreign-key integrity.
 - Exercise legacy login and quotation create/edit/view/print/revise flows, then test two-company isolation and the rule that only a quotation's creator may edit it.
 - Confirm that no database config, credentials, SQL dump, customer data, backup, or log is staged for commit.
-- Do not run the live migration until the owner has reviewed the concrete scripts and dry-run evidence and explicitly approved execution.
+- Do not run the live migration until the owner has reviewed the concrete scripts and dry-run evidence and explicitly approved execution. The CLI preflight remains read-only by default; applying requires `--apply --backup-verified --maintenance-confirmed`.
 
 
 ## Full PHP source pass
