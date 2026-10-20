@@ -149,7 +149,6 @@ if (!$apply) {
     exit(0);
 }
 
-$conn->begin_transaction();
 try {
     $conn->query(
         "CREATE TABLE IF NOT EXISTS companies (
@@ -189,11 +188,28 @@ try {
         migrationAddTenantColumn($conn, $table);
     }
 
-    $conn->query(
-        "UPDATE users SET company_id = LAST_INSERT_ID() WHERE company_id IS NULL"
+    $companyResult = $conn->query(
+        "SELECT id FROM companies WHERE slug = 'legacy-company' LIMIT 1"
     );
+    $legacyCompanyId = (int)($companyResult->fetch_assoc()['id'] ?? 0);
+    if ($legacyCompanyId <= 0) {
+        throw new RuntimeException('Initial company row was not created.');
+    }
+
+    // MySQL DDL auto-commits. Begin the data-mapping transaction only after all
+    // additive DDL has completed so the backfill itself can roll back atomically.
+    $conn->begin_transaction();
+    $stmt = $conn->prepare(
+        "UPDATE users SET company_id = ? WHERE company_id IS NULL"
+    );
+    $stmt->bind_param('i', $legacyCompanyId);
+    $stmt->execute();
+    $stmt->close();
     foreach (['clients', 'products', 'quotations', 'quotation_term_sets', 'quotation_company_settings', 'activity_log'] as $table) {
-        $conn->query("UPDATE `{$table}` SET company_id = LAST_INSERT_ID() WHERE company_id IS NULL");
+        $stmt = $conn->prepare("UPDATE `{$table}` SET company_id = ? WHERE company_id IS NULL");
+        $stmt->bind_param('i', $legacyCompanyId);
+        $stmt->execute();
+        $stmt->close();
     }
 
     $conn->commit();
