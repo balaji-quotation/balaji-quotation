@@ -8,6 +8,10 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 include("../includes/db.php");
+require_once __DIR__ . '/../includes/permissions.php';
+erpRequireCompanyUser($conn);
+erpRequire('quotations.add');
+$companyId = erpCurrentCompanyId();
 
 
 // =====================================================
@@ -257,6 +261,7 @@ $client_stmt = mysqli_prepare(
     SELECT id
     FROM clients
     WHERE id = ?
+      AND company_id = ?
     LIMIT 1
     "
 );
@@ -274,8 +279,9 @@ if (!$client_stmt) {
 
 mysqli_stmt_bind_param(
     $client_stmt,
-    "i",
-    $client_id
+    "ii",
+    $client_id,
+    $companyId
 );
 
 mysqli_stmt_execute(
@@ -669,6 +675,7 @@ try {
         SELECT id
         FROM quotations
         WHERE quotation_no = ?
+          AND company_id = ?
         LIMIT 1
     ";
 
@@ -686,8 +693,9 @@ try {
 
     mysqli_stmt_bind_param(
         $duplicate_stmt,
-        "s",
-        $quotation_no
+        "si",
+        $quotation_no,
+        $companyId
     );
 
     mysqli_stmt_execute(
@@ -736,6 +744,7 @@ try {
             status,
             remarks,
             copied_from_quotation_id,
+            company_id,
             created_by
         )
         VALUES
@@ -751,6 +760,7 @@ try {
             ?,
             ?,
             NULL,
+            ?,
             ?
         )
     ";
@@ -771,7 +781,7 @@ try {
 
     mysqli_stmt_bind_param(
         $master_stmt,
-        "sissssssssi",
+        "sissssssssii",
         $quotation_no,
         $client_id,
         $rfq_no,
@@ -782,6 +792,7 @@ try {
         $validity_text,
         $status,
         $remarks,
+        $companyId,
         $created_by
     );
 
