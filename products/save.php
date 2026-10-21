@@ -39,6 +39,9 @@ $product_code =
 $product_name =
     trim($_POST['product_name'] ?? '');
 
+$default_rate =
+    trim((string)($_POST['default_rate'] ?? ''));
+
 $part_number =
     trim($_POST['part_number'] ?? '');
 
@@ -102,6 +105,10 @@ if ($product_code === '') {
 
 if ($product_name === '') {
     header("Location: add.php?msg=name_required");
+    exit;
+}
+if ($default_rate !== '' && (!is_numeric($default_rate) || !is_finite((float)$default_rate) || (float)$default_rate < 0)) {
+    header("Location: add.php?msg=invalid_rate");
     exit;
 }
 
@@ -664,6 +671,7 @@ $insert_stmt =
             company_id,
             product_code,
             product_name,
+            default_rate,
             part_number,
             drawing_number,
             revision_no,
@@ -680,7 +688,7 @@ $insert_stmt =
         )
         VALUES
         (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
         "
     );
@@ -737,10 +745,11 @@ if (!$insert_stmt) {
 
 mysqli_stmt_bind_param(
     $insert_stmt,
-    "isssssssdsdsssss",
+    "issssssssdsdsssss",
     $companyId,
     $product_code,
     $product_name,
+    $default_rate,
     $part_number,
     $drawing_number,
     $revision_no,
