@@ -44,6 +44,7 @@ unset($_SESSION['company_error']);
                 <div class="col-md-4 mb-3"><label class="form-label">City</label><input class="form-control" name="city" maxlength="100"></div>
                 <div class="col-md-4 mb-3"><label class="form-label">State</label><input class="form-control" name="state" maxlength="100"></div>
                 <div class="col-md-4 mb-3"><label class="form-label">Pincode</label><input class="form-control" name="pincode" maxlength="20"></div>
+                <div class="col-md-6 mb-3"><label class="form-label">Quotation number format *</label><input class="form-control" name="quotation_prefix" required maxlength="100" value="QTN/{FY}/{SEQ:4}"><small class="text-muted">Tokens: {FY}, {YYYY}, {YY}, {SEQ}, {SEQ:5}. Sequence continues within the company.</small></div>
             </div>
         </div></div>
         <div class="card"><div class="card-body">
@@ -51,7 +52,7 @@ unset($_SESSION['company_error']);
             <div class="row">
                 <div class="col-md-4 mb-3"><label class="form-label">Full name *</label><input class="form-control" name="admin_name" required maxlength="100"></div>
                 <div class="col-md-4 mb-3"><label class="form-label">Login email *</label><input class="form-control" type="email" name="admin_email" required maxlength="100"></div>
-                <div class="col-md-4 mb-3"><label class="form-label">Temporary password *</label><input class="form-control" type="password" name="admin_password" required minlength="10" autocomplete="new-password"></div>
+                <div class="col-md-4 mb-3"><label class="form-label">Temporary password *</label><input class="form-control" type="password" name="admin_password" required minlength="12" autocomplete="new-password"></div>
                 <div class="col-md-6 mb-3"><label class="form-label">Assigned quotation template *</label><select class="form-select" name="admin_template_version_id" required>
                     <option value="">Choose template</option>
                     <?php while ($template = $templateResult->fetch_assoc()) { ?>
