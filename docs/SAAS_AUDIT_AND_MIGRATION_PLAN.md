@@ -81,8 +81,16 @@ The development branch now contains the additive migration/preflight tooling, te
 
 The live database migration and Super Admin bootstrap have not been executed. No database connection or project runtime was available for PHP linting or MySQL regression tests. The CLI migration is still a draft until it has passed a restored-backup dry run and manual review.
 
+Development implementation update:
+- Added versioned quotation-template management, Super Admin subscription management, and Super Admin company-user create/edit/deactivate flows. The first company administrator is assigned a template during company creation; subsequent users have one assigned template version.
+- Added manual Trial/Paid date windows and Business/Premium active-user caps. The company gate permits writes while either active window applies, then switches the account to read-only; the dashboard explains this state and quote creation is hidden while read-only. Existing quote viewing and printing remain available.
+- New quotations save the assigned template version and a configuration snapshot. Revision creation copies the source quote's template snapshot, and the migration backfills legacy quotations and users to the initial Standard Quotation version without rewriting quote content.
+- The template editor stores calculation, tax/GST, total-visibility, and print-layout preferences as versioned configuration. These settings are not yet fully applied to quotation calculations or print rendering; complete that runtime integration before presenting those controls as operational.
+- A requested broad permission-map update for customer editing and disabling legacy in-company user administration was rejected by automatic approval review because it changes persistent access control. The existing permission map remains in force pending explicit approval.
+- No live migration or Super Admin bootstrap has been executed. The migration remains read-only by default and apply requires explicit owner approval, a verified restorable backup, and maintenance mode.
+
 Remaining implementation gates before deployment:
-- Complete the Super Admin quotation-template assignment/catalog and subscription-management routes from the detailed handover behavior; no billing or plan rules are inferred here.
-- Finish the direct-URL permission and tenant review across legacy ERP routes outside the approved client menu, including any product-management endpoints.
-- Run PHP 8.2 lint and the quotation/tenant-isolation regression suite against a restored database, compare all table row counts and quotation relationships, and inspect the migration's implicit-DDL recovery behavior.
-- Review the final migration and dry-run evidence with the owner and obtain explicit approval before running it against the live database.
+- Complete and review template tax/calculation/total and print-layout runtime behavior while preserving legacy per-quotation values and snapshots.
+- Finish direct-URL permission and tenant review across legacy ERP routes outside the approved client menu, including product-management endpoints and the blocked permission-map change after approval.
+- Run PHP 8.2 lint and quotation/tenant-isolation regression tests against a restored database, compare all table row counts and quotation relationships, and inspect the migration's implicit-DDL recovery behavior.
+- Review the final migration and restored-backup dry-run evidence with the owner and obtain explicit approval before running it against the live database.
