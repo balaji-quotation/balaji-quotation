@@ -151,6 +151,7 @@ include("../includes/sidebar.php");
 <form
     action="save.php"
     method="POST"
+    id="client-form"
     autocomplete="off"
 >
 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
@@ -176,6 +177,7 @@ include("../includes/sidebar.php");
     type="text"
     name="company_name"
     class="form-control"
+    maxlength="150"
     placeholder="Enter company name"
     required
 >
@@ -258,6 +260,30 @@ include("../includes/sidebar.php");
 </div>
 
 
+<div class="client-help">Enter a mobile number here or provide an alternate mobile number.</div>
+
+</div>
+
+
+<!-- ALTERNATE MOBILE -->
+<div class="col-xl-4 col-lg-4 col-md-6">
+
+<label class="client-form-label">
+    Alternate Mobile
+</label>
+
+<input
+    type="text"
+    name="alternate_mobile"
+    id="alternate_mobile"
+    class="form-control"
+    maxlength="30"
+    placeholder="Alternate phone number"
+>
+
+</div>
+
+
 <!-- STATUS -->
 <div class="col-xl-4 col-lg-4 col-md-6">
 
@@ -288,12 +314,14 @@ include("../includes/sidebar.php");
 
 <label class="client-form-label">
     Complete Address
+    <span class="required-mark">*</span>
 </label>
 
 <textarea
     name="address"
     class="form-control"
     rows="4"
+    required
     placeholder="Plot / Building, Street, Area, City, State, PIN Code, Country"
 ></textarea>
 
@@ -345,6 +373,28 @@ include("../includes/sidebar.php");
 document.addEventListener(
     "DOMContentLoaded",
     function () {
+
+        const form = document.getElementById("client-form");
+        const mobile = document.querySelector('[name="mobile"]');
+        const alternateMobile = document.getElementById("alternate_mobile");
+
+        if (form) {
+            form.addEventListener("submit", function (event) {
+                const hasPhone = mobile.value.trim() !== "" || alternateMobile.value.trim() !== "";
+                if (!hasPhone) {
+                    event.preventDefault();
+                    mobile.setCustomValidity("Enter a mobile number or an alternate mobile number.");
+                    mobile.reportValidity();
+                } else {
+                    mobile.setCustomValidity("");
+                }
+            });
+            [mobile, alternateMobile].forEach(function (field) {
+                field.addEventListener("input", function () {
+                    mobile.setCustomValidity("");
+                });
+            });
+        }
 
         const gstin =
             document.getElementById(
