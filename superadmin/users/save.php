@@ -25,8 +25,8 @@ if ($limit === 0) adminUserFail('Set the company plan in Subscriptions before cr
 $count = $conn->prepare("SELECT COUNT(*) AS total FROM users WHERE company_id = ? AND status = 'Active'");
 $count->bind_param('i', $companyId); $count->execute(); $activeUsers = (int)($count->get_result()->fetch_assoc()['total'] ?? 0); $count->close();
 if ($activeUsers >= $limit) adminUserFail('The company has reached its active-user limit for this plan.');
-$template = $conn->prepare("SELECT v.id FROM quotation_template_versions v JOIN quotation_templates t ON t.id = v.template_id WHERE v.id = ? AND t.is_active = 1 LIMIT 1");
-$template->bind_param('i', $templateVersionId); $template->execute(); $templateRow = $template->get_result()->fetch_assoc(); $template->close();
+$template = $conn->prepare("SELECT v.id FROM quotation_template_versions v JOIN quotation_templates t ON t.id = v.template_id WHERE v.id = ? AND t.company_id = ? AND t.is_active = 1 LIMIT 1");
+$template->bind_param('ii', $templateVersionId, $companyId); $template->execute(); $templateRow = $template->get_result()->fetch_assoc(); $template->close();
 if (!$templateRow) adminUserFail('Choose an active template version.');
 $dupe = $conn->prepare('SELECT id FROM users WHERE LOWER(email) = ? LIMIT 1');
 $dupe->bind_param('s', $email); $dupe->execute(); $dupe->store_result(); $hasDuplicate = $dupe->num_rows > 0; $dupe->close();
