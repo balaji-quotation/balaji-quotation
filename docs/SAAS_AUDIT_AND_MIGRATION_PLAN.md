@@ -126,3 +126,10 @@ The `main` branch was not modified. No database credentials, customer records, b
 - Customer Master create, edit, and quotation quick-add now enforce the same schema-aligned limits and required fields server-side: company name (150 characters), billing address, and either mobile (20 characters) or alternate mobile (30 characters). GSTIN, email, and status are validated; alternate mobile is saved and available in both customer forms. Existing customer rows are not bulk-updated by this change.
 
 The development branch remains the only branch changed. The `main` branch is still at its original audited commit.
+
+## Latest route and syntax review
+
+- A fresh static route scan covered all 73 application PHP files outside bundled assets. Of 61 route files, the public 404 page is the only route without an authentication or permission guard; the other routes have session, company-role, Super Admin, or system-access checks.
+- The legacy `users.add` and `users.edit` permission grants remain empty, so the old global user-master save/update routes return access denied before their database code. Company-user management remains on the Super Admin routes.
+- PHP 8.2.20 syntax checks passed for the customer and quick-add flow plus 15 high-risk quotation, template, subscription/access-control, and migration routes.
+- No additional database writes were performed during this review. Authenticated browser and print regression tests remain pending because the MAMP project folder is behind the GitHub `development` source; these source-level checks do not replace runtime tests.
