@@ -7,6 +7,8 @@ if (!isset($_SESSION['user_id'])) {
 require_once __DIR__ . '/../../includes/permissions.php';
 erpRequire('companies.add');
 require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/quotation_numbering.php';
+require_once __DIR__ . '/../../includes/company_settings_sync.php';
 
 function companyPost(string $key, int $limit = 255): string {
     $value = trim((string)($_POST[$key] ?? ''));
@@ -36,6 +38,10 @@ $address = companyPost('billing_address');
 $city = companyPost('city', 100);
 $state = companyPost('state', 100);
 $pincode = companyPost('pincode', 20);
+$quotationNumberFormat = companyPost('quotation_prefix', 100);
+if ($quotationNumberFormat === '') {
+    $quotationNumberFormat = 'QTN/{FY}/{SEQ:4}';
+}
 $adminName = companyPost('admin_name', 100);
 $adminEmail = strtolower(companyPost('admin_email', 100));
 $adminPassword = (string)($_POST['admin_password'] ?? '');
@@ -43,6 +49,9 @@ $adminTemplateVersionId = filter_var($_POST['admin_template_version_id'] ?? null
 
 if ($companyName === '' || $adminName === '' || !filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
     companySaveFail('Company name, administrator name, and a valid administrator email are required.');
+}
+if (!quotationNumberPatternIsValid($quotationNumberFormat)) {
+    companySaveFail('Use a valid quotation number pattern with a sequence token, such as QTN/{FY}/{SEQ:4}.');
 }
 if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
     companySaveFail('Enter a valid company email address.');
@@ -93,6 +102,21 @@ try {
     $companyInsert->execute();
     $companyId = (int)$conn->insert_id;
     $companyInsert->close();
+
+    syncQuotationCompanySettings(
+        $conn,
+        $companyId,
+        $companyName,
+        $email,
+        $mobile,
+        $alternateMobile,
+        $gstin,
+        $address,
+        $city,
+        $state,
+        $pincode,
+        $quotationNumberFormat
+    );
 
     $userInsert = $conn->prepare(
         "INSERT INTO users (name, email, password, role, status, company_id, assigned_template_version_id)
