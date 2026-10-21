@@ -29,10 +29,10 @@ $templateStmt = $conn->prepare(
      FROM users u
      JOIN quotation_template_versions v ON v.id = u.assigned_template_version_id
      JOIN quotation_templates t ON t.id = v.template_id
-     WHERE u.id = ? AND u.company_id = ? AND u.status = 'Active' AND t.is_active = 1
+     WHERE u.id = ? AND u.company_id = ? AND t.company_id = ? AND u.status = 'Active' AND t.is_active = 1
      LIMIT 1"
 );
-$templateStmt->bind_param('ii', $userId, $companyId);
+$templateStmt->bind_param('iii', $userId, $companyId, $companyId);
 $templateStmt->execute();
 $templateRow = $templateStmt->get_result()->fetch_assoc();
 $templateStmt->close();
