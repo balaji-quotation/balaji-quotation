@@ -303,19 +303,19 @@ function formatQuotationValue(
 
 $company = [
     'company_name' =>
-        'Unicorn Technoflex',
+        'Company',
 
     'company_address' =>
-        'Plot 74 & 75, Survey No. 3, Rolex Industrial Area, Bhojpara, Gondal, Rajkot, Gujarat, INDIA',
+        '',
 
     'gst_no' =>
-        '24AAIFU3176H1Z1',
+        '',
 
     'phone' =>
-        '+91 9727201111',
+        '',
 
     'email' =>
-        'kishan@unicorntechnoflex.com',
+        '',
 
     'website' =>
         '',
@@ -709,11 +709,9 @@ $page_size =
         ? 'A4 landscape'
         : 'A4 portrait';
 
-$logo_url =
-    '/quotation/quotations/assets/unicorn-logo.png';
+$logo_url = '';
 
-$seal_signature_url =
-    '/quotation/quotations/assets/unicorn-stamp-signature.png';
+$seal_signature_url = '';
 
 ?>
 <!DOCTYPE html>
@@ -1212,7 +1210,7 @@ th {
 
     <img
         src="<?= htmlspecialchars($logo_url); ?>"
-        alt="Unicorn Technoflex"
+        alt="<?= htmlspecialchars((string)$company['company_name']); ?>"
         class="company-logo"
     >
 
@@ -1776,7 +1774,7 @@ foreach (
 <div class="signature-box">
 
     <div class="signature-heading">
-        For Unicorn Technoflex
+        For <?= htmlspecialchars((string)$company['company_name']); ?>
     </div>
 
     <div class="signature-images">
@@ -1827,7 +1825,7 @@ foreach (
 
 
 <div class="footer-note">
-    Unicorn Technoflex
+    <?= htmlspecialchars((string)$company['company_name']); ?>
     &nbsp; | &nbsp;
     Quotation No. <?= htmlspecialchars($quotation['quotation_no']); ?>
     &nbsp; | &nbsp;
