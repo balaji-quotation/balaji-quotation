@@ -40,7 +40,7 @@ This is a source-level audit of the committed baseline, not a production databas
 
 - The owner confirmed Balaji Webtech as the initial company for existing ERP records because the supplied SQL export and connected local database had no named `quotation_company_settings` row at `id=1`.
 - The migration CLI accepts `--initial-company-name="Balaji Webtech"` for this owner-confirmed fallback. If the settings row is absent, apply creates the initial company and a minimal company-settings row; unavailable profile fields remain blank for the Super Admin to complete later.
-- A read-only preflight against the local `quotations` database found zero company-settings rows and stopped before any changes. No database write has been run.
+- The initial read-only preflight against the local `quotations` database found zero company-settings rows and stopped safely. After the owner approved migration and confirmed the backup, the local MAMP database was migrated; verification is recorded below.
 
 ## Latest migration verification
 
@@ -92,20 +92,24 @@ The source pass does not substitute for executing the application or validating 
 
 ## Development implementation status
 
-The development branch now contains the additive migration/preflight tooling, tenant company master and admin bootstrap, company status checks, approved client/admin navigation, company dashboard/profile/change-request routes, tenant and creator filters on the main quotation read/write/revision paths, and company-scoped customer CRUD. Quotation entry also has a CSRF-protected inline customer quick-add flow; it requires a name, billing address, and one of mobile or alternate mobile, then selects the saved customer in the open quotation. The migration adds alternate mobile as a nullable customer field only when absent.
+The development branch contains the multi-company migration and preflight tooling, Super Admin company/user/template/subscription/change-request flows, tenant-scoped company dashboards, customer management, quotation visibility and creator-only editing, immutable template snapshots, safe calculation formulas, and four print presets. The migration was applied to the local MAMP `quotations` database on 2026-10-21 after explicit owner approval and backup confirmation; it was not applied to a production server.
 
-The live database migration and Super Admin bootstrap have not been executed. No database connection or project runtime was available for PHP linting or MySQL regression tests. The CLI migration is still a draft until it has passed a restored-backup dry run and manual review.
+The migration was checked on an isolated clone and applied twice. All 25 pre-existing populated data tables retained row counts, primary-key sets, and original column values/timestamps. Tenant rows had no null company mappings, and quotation/template assignments were populated. The local post-migration checks passed. The supplied SQL export did not include a company-settings row; the migration accepted the owner-confirmed initial company name, `Balaji Webtech`, and left unavailable profile fields blank. An independent restore test of the supplied export was not performed.
 
-Development implementation update:
-- Added versioned quotation-template management, Super Admin subscription management, and Super Admin company-user create/edit/deactivate flows. The first company administrator is assigned a template during company creation; subsequent users have one assigned template version.
-- Added manual Trial/Paid date windows and Business/Premium active-user caps. The company gate permits writes while either active window applies, then switches the account to read-only; the dashboard explains this state and quote creation is hidden while read-only. Existing quote viewing and printing remain available.
-- New quotations save the assigned template version and a configuration snapshot. Revision creation copies the source quote's template snapshot, and the migration backfills legacy quotations and users to the initial Standard Quotation version without rewriting quote content.
-- Template settings are now read from each quotation's immutable configuration snapshot during print. Standard calculations use recognized Qty/Quantity and Rate/Price columns (or an Amount column); custom formulas use a safe arithmetic grammar (`qty`, `rate`, `amount`, numbers, `+ - * /`, parentheses) without PHP evaluation. Optional per-row Amount, GST, subtotal/tax/grand-total visibility, 0–4 decimal places, four rounding modes, and Classic/Compact/Minimal/Modern print presets are applied in print output. New quotes and revisions keep columns from their assigned/source template; server handlers ignore posted column edits. The migration's initial legacy snapshot hides totals so existing print output stays unchanged unless a Super Admin creates a new template version.
-- Following explicit owner approval, customer-edit permissions now cover all company roles, while legacy company-user management permissions are disabled. Server-side guards also block direct access to the legacy user list, add, save, edit, and update routes; client user lifecycle is handled through Super Admin routes.
-- No live migration or Super Admin bootstrap has been executed. The migration remains read-only by default and apply requires explicit owner approval, a verified restorable backup, and maintenance mode.
+Recent source-audit fixes on `development`:
+- Quotation print branding now reads the company profile and no longer falls back to Unicorn Technoflex contact details or logos.
+- Product listing, viewing, creation, editing, updating, and deletion now check company roles and company ownership. Product writes also honor read-only subscription state; create/update forms validate CSRF tokens.
+- Legacy ERP search results are restricted through the current company's client records and product records. The legacy ERP dashboard now requires a verified company session.
+- Legacy user-master routes remain blocked by empty permission grants; company-user lifecycle is managed through Super Admin routes.
+- PHP 8.2 lint passed for all 11 source files changed in this pass. Static checks confirmed tenant insert/filter conditions, CSRF validation, and removal of legacy print branding.
 
-Remaining implementation gates before deployment:
-- Run visual print/PDF checks against representative restored quotations, including legacy quotations with totals hidden, GST on/off, custom formulas, rounding choices, and each print preset.
-- Finish direct-URL permission and tenant review across legacy ERP routes outside the approved client menu, including product-management endpoints.
-- Run PHP 8.2 lint and quotation/tenant-isolation regression tests against a restored database, compare all table row counts and quotation relationships, and inspect the migration's implicit-DDL recovery behavior.
-- Review the final migration and restored-backup dry-run evidence with the owner and obtain explicit approval before running it against the live database.
+Super Admin bootstrap remains a private setup action. `tools/create_super_admin.php` reads credentials from environment variables and does not print or store the password. No Super Admin credentials or customer data were added to GitHub.
+
+## Remaining review gates
+
+- Check real migrated quotations in browser print/PDF for portrait and landscape output, legacy totals behavior, GST, custom formulas, rounding, and all four presets.
+- Run authenticated end-to-end checks using two companies: customer/product/quotation isolation, same-company quote visibility, creator-only edits, template snapshot stability, and read-only subscription behavior.
+- Restore the supplied backup independently before any production migration. The current preservation proof came from an isolated clone of the connected local database, not from a restore of the attached SQL export.
+- Create the first Super Admin using private credentials, then review the complete application on the development branch before deployment.
+
+The `main` branch was not modified. No database credentials, customer records, backups, or secrets were committed.
