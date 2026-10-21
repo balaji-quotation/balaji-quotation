@@ -29,7 +29,7 @@ if ($id) {
     $stmt->bind_param('i', $id); $stmt->execute(); $version = $stmt->get_result()->fetch_assoc(); $stmt->close();
     if ($version) {
         $decoded = json_decode($version['config_json'], true);
-        if (is_array($decoded)) $config = array_replace_recursive($config, $decoded);
+        if (is_array($decoded)) $config = array_merge($config, $decoded);
     }
 }
 if (empty($_SESSION['csrf_token'])) $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
