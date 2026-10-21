@@ -113,3 +113,13 @@ Super Admin bootstrap remains a private setup action. `tools/create_super_admin.
 - Create the first Super Admin using private credentials, then review the complete application on the development branch before deployment.
 
 The `main` branch was not modified. No database credentials, customer records, backups, or secrets were committed.
+
+
+## Follow-up requirement completion
+
+- Quotation rows now have an optional company-scoped Product Master picker. It fills matching product code, part number, description, and default-rate columns; users can then edit those values before saving. The submitted product ID is checked against the current company and stored with the quotation row, while the copied row values remain the historical snapshot.
+- Product Master supports an optional non-negative default rate. Company Master supports a validated company-specific number pattern (`{FY}`, `{YYYY}`, `{YY}`, `{SEQ}`, and `{SEQ:n}`) and an optional PNG/JPEG/WebP logo upload. Company profile changes sync to the print-facing settings. Uploaded logo files remain under the ignored `uploads/` directory.
+- The safe migration now idempotently adds nullable `products.default_rate` and `companies.logo_path` columns. PHP 8.2 lint passed for all 18 changed/supporting PHP files. SQL placeholder/bind counts were checked for product create/update, quotation-row save, and company create/update; the counts match. Number-pattern formatting cases passed.
+- These two new columns have not yet been applied to the local database. MAMP MySQL was unavailable in the current run, and its data directory could not be written from this sandbox; no database mutation was attempted. Re-run the reviewed migration on a restored clone, then on the local development database, before using logo uploads or default rates.
+
+The development branch remains the only branch changed. The `main` branch is still at its original audited commit.
