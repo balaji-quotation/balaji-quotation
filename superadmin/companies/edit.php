@@ -16,7 +16,7 @@ if (!$id || $id < 1) {
     exit('Invalid company.');
 }
 $stmt = $conn->prepare(
-    'SELECT c.id, c.company_name, c.contact_person, c.email, c.mobile, c.alternate_mobile, c.gstin, c.billing_address, c.city, c.state, c.pincode, c.status,
+    'SELECT c.id, c.company_name, c.contact_person, c.email, c.mobile, c.alternate_mobile, c.gstin, c.billing_address, c.city, c.state, c.pincode, c.status, c.logo_path,
             (SELECT s.quotation_prefix FROM quotation_company_settings s WHERE s.company_id = c.id ORDER BY s.id ASC LIMIT 1) AS quotation_prefix
      FROM companies c WHERE c.id = ? LIMIT 1'
 );
@@ -39,7 +39,7 @@ include __DIR__ . '/../../includes/superadmin_sidebar.php';
 <div class="content-page"><div class="content"><div class="container-fluid">
     <div class="page-title-box"><h4 class="page-title">Edit Company</h4></div>
     <?php if ($error !== '') { ?><div class="alert alert-danger"><?= companyEditEscape($error) ?></div><?php } ?>
-    <form method="post" action="update.php">
+    <form method="post" action="update.php" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="<?= companyEditEscape($_SESSION['csrf_token']) ?>">
         <input type="hidden" name="id" value="<?= (int)$company['id'] ?>">
         <div class="card"><div class="card-body"><div class="row">
@@ -53,6 +53,9 @@ include __DIR__ . '/../../includes/superadmin_sidebar.php';
             <div class="col-md-4 mb-3"><label class="form-label">City</label><input class="form-control" name="city" maxlength="100" value="<?= companyEditEscape($company['city']) ?>"></div>
             <div class="col-md-4 mb-3"><label class="form-label">State</label><input class="form-control" name="state" maxlength="100" value="<?= companyEditEscape($company['state']) ?>"></div>
             <div class="col-md-4 mb-3"><label class="form-label">Pincode</label><input class="form-control" name="pincode" maxlength="20" value="<?= companyEditEscape($company['pincode']) ?>"></div>
+            <div class="col-md-6 mb-3"><label class="form-label">Company logo</label><input class="form-control" type="file" name="company_logo" accept="image/png,image/jpeg,image/webp"><small class="text-muted">PNG, JPEG or WebP; maximum 2 MB. Leave blank to keep the current logo.</small>
+                <?php if (!empty($company['logo_path'])) { ?><div class="mt-2"><img src="<?= companyEditEscape($company['logo_path']) ?>" alt="Company logo" style="max-width:180px;max-height:90px;object-fit:contain"></div><?php } ?>
+            </div>
             <div class="col-md-6 mb-3"><label class="form-label">Quotation number format *</label><input class="form-control" name="quotation_prefix" required maxlength="100" value="<?= companyEditEscape(trim((string)($company['quotation_prefix'] ?? '')) !== '' ? $company['quotation_prefix'] : 'QTN/{FY}/{SEQ:4}') ?>"><small class="text-muted">Tokens: {FY}, {YYYY}, {YY}, {SEQ}, {SEQ:5}. Sequence continues within the company.</small></div>
             <div class="col-md-4 mb-3"><label class="form-label">Status</label><select class="form-select" name="status">
                 <?php foreach (['Active', 'Inactive', 'Suspended'] as $status) { ?><option value="<?= $status ?>" <?= $company['status'] === $status ? 'selected' : '' ?>><?= $status ?></option><?php } ?>
