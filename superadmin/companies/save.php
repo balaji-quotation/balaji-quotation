@@ -9,6 +9,7 @@ erpRequire('companies.add');
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/quotation_numbering.php';
 require_once __DIR__ . '/../../includes/company_settings_sync.php';
+require_once __DIR__ . '/../../includes/company_logo_upload.php';
 
 function companyPost(string $key, int $limit = 255): string {
     $value = trim((string)($_POST[$key] ?? ''));
@@ -86,18 +87,24 @@ if ($hash === false) {
     companySaveFail('Could not secure the administrator password.');
 }
 $slug = 'company-' . bin2hex(random_bytes(8));
+try {
+    $newLogoPath = storeCompanyLogoUpload($_FILES['company_logo'] ?? []);
+} catch (Throwable $error) {
+    companySaveFail($error->getMessage());
+}
+$logoPath = $newLogoPath ?? '';
 
 try {
     $conn->begin_transaction();
     $companyInsert = $conn->prepare(
         "INSERT INTO companies
-            (company_name, slug, contact_person, email, mobile, alternate_mobile, gstin, billing_address, city, state, pincode, status)
-         VALUES (?, ?, ?, NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), 'Active')"
+            (company_name, slug, contact_person, email, mobile, alternate_mobile, gstin, billing_address, city, state, pincode, logo_path, status)
+         VALUES (?, ?, ?, NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), 'Active')"
     );
     $companyInsert->bind_param(
-        'sssssssssss',
+        'ssssssssssss',
         $companyName, $slug, $contactPerson, $email, $mobile, $alternateMobile,
-        $gstin, $address, $city, $state, $pincode
+        $gstin, $address, $city, $state, $pincode, $logoPath
     );
     $companyInsert->execute();
     $companyId = (int)$conn->insert_id;
@@ -128,6 +135,7 @@ try {
     $conn->commit();
 } catch (Throwable $error) {
     $conn->rollback();
+    deleteCompanyLogo($newLogoPath);
     error_log('Company creation failed: ' . $error->getMessage());
     companySaveFail('The company could not be created. Check that the administrator email is unique and try again.');
 }
