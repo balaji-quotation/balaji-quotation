@@ -310,116 +310,70 @@ if (!$client_exists) {
 
 
 // =====================================================
-// DYNAMIC COLUMN INPUTS
+// LOAD THE ASSIGNED TEMPLATE VERSION
 // =====================================================
 
-$column_labels =
-    $_POST['column_label'] ?? [];
-
-$column_units =
-    $_POST['column_unit'] ?? [];
-
-$column_types =
-    $_POST['column_type'] ?? [];
-
-$column_aligns =
-    $_POST['column_align'] ?? [];
-
-if (
-    !is_array(
-        $column_labels
-    )
-) {
-    $column_labels = [];
+$templateStmt = mysqli_prepare(
+    $conn,
+    "SELECT v.id, v.config_json
+     FROM users u
+     JOIN quotation_template_versions v ON v.id = u.assigned_template_version_id
+     JOIN quotation_templates t ON t.id = v.template_id
+     WHERE u.id = ? AND u.company_id = ? AND u.status = 'Active' AND t.is_active = 1
+     LIMIT 1"
+);
+mysqli_stmt_bind_param($templateStmt, "ii", $userId, $companyId);
+mysqli_stmt_execute($templateStmt);
+$templateRow = mysqli_stmt_get_result($templateStmt);
+$templateRow = $templateRow ? mysqli_fetch_assoc($templateRow) : null;
+mysqli_stmt_close($templateStmt);
+if (!$templateRow) {
+    $_SESSION['quotation_error'] = "No active quotation template is assigned to this user. Contact your administrator.";
+    header("Location: add.php");
+    exit;
 }
-
-if (
-    count(
-        $column_labels
-    ) === 0
-) {
-    quoteFail(
-        "At least one quotation column is required."
-    );
+$templateVersionId = (int)$templateRow['id'];
+$templateSnapshot = (string)$templateRow['config_json'];
+if (!is_array(json_decode($templateSnapshot, true))) {
+    $_SESSION['quotation_error'] = "Assigned quotation template is invalid. Contact your administrator.";
+    header("Location: add.php");
+    exit;
 }
 
 
-// Build clean column definitions.
+// =====================================================
+
+// Columns always come from the assigned version on the server.
+// Posted column metadata is ignored so client input cannot alter an approved template.
+$templateConfig = json_decode($templateSnapshot, true);
+if (!is_array($templateConfig) || empty($templateConfig['columns']) || !is_array($templateConfig['columns'])) {
+    $_SESSION['quotation_error'] = "Assigned quotation template has no valid columns.";
+    header("Location: add.php");
+    exit;
+}
 
 $columns = [];
-
-foreach (
-    $column_labels
-    as $index =>
-       $label
-) {
-
-    $label =
-        quoteClean(
-            $label
-        );
-
-    if ($label === '') {
-        continue;
-    }
-
+foreach ($templateConfig['columns'] as $index => $templateColumn) {
+    if (!is_array($templateColumn)) continue;
+    $label = quoteClean($templateColumn['label'] ?? '');
+    if ($label === '') continue;
+    $type = quoteAllowedColumnType($templateColumn['type'] ?? 'text');
+    $align = quoteAllowedAlign($templateColumn['align'] ?? 'left');
     $columns[] = [
-        'source_index' =>
-            intval(
-                $index
-            ),
-
-        'column_key' =>
-            'col_' .
-            (
-                count(
-                    $columns
-                ) + 1
-            ),
-
-        'column_label' =>
-            $label,
-
-        'unit_text' =>
-            quoteClean(
-                $column_units[
-                    $index
-                ] ?? ''
-            ),
-
-        'data_type' =>
-            quoteAllowedColumnType(
-                quoteClean(
-                    $column_types[
-                        $index
-                    ] ?? 'text'
-                )
-            ),
-
-        'text_align' =>
-            quoteAllowedAlign(
-                quoteClean(
-                    $column_aligns[
-                        $index
-                    ] ?? 'left'
-                )
-            )
+        'source_index' => (int)$index,
+        'column_key' => 'col_' . (count($columns) + 1),
+        'column_label' => $label,
+        'unit_text' => quoteClean($templateColumn['unit'] ?? ''),
+        'data_type' => $type,
+        'text_align' => $align
     ];
 }
-
-
-if (
-    count(
-        $columns
-    ) === 0
-) {
-    quoteFail(
-        "At least one valid quotation column is required."
-    );
+if (!$columns) {
+    $_SESSION['quotation_error'] = "Assigned quotation template has no usable columns.";
+    header("Location: add.php");
+    exit;
 }
 
-
-// =====================================================
 // DYNAMIC ROW INPUTS
 // =====================================================
 
@@ -653,38 +607,6 @@ foreach (
 
     $general_terms[] =
         $condition;
-}
-
-
-// =====================================================
-// LOAD THE ASSIGNED TEMPLATE VERSION
-// =====================================================
-
-$templateStmt = mysqli_prepare(
-    $conn,
-    "SELECT v.id, v.config_json
-     FROM users u
-     JOIN quotation_template_versions v ON v.id = u.assigned_template_version_id
-     JOIN quotation_templates t ON t.id = v.template_id
-     WHERE u.id = ? AND u.company_id = ? AND u.status = 'Active' AND t.is_active = 1
-     LIMIT 1"
-);
-mysqli_stmt_bind_param($templateStmt, "ii", $userId, $companyId);
-mysqli_stmt_execute($templateStmt);
-$templateRow = mysqli_stmt_get_result($templateStmt);
-$templateRow = $templateRow ? mysqli_fetch_assoc($templateRow) : null;
-mysqli_stmt_close($templateStmt);
-if (!$templateRow) {
-    $_SESSION['quotation_error'] = "No active quotation template is assigned to this user. Contact your administrator.";
-    header("Location: add.php");
-    exit;
-}
-$templateVersionId = (int)$templateRow['id'];
-$templateSnapshot = (string)$templateRow['config_json'];
-if (!is_array(json_decode($templateSnapshot, true))) {
-    $_SESSION['quotation_error'] = "Assigned quotation template is invalid. Contact your administrator.";
-    header("Location: add.php");
-    exit;
 }
 
 
