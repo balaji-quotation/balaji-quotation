@@ -74,7 +74,7 @@ if ($configJson === false) templateFail('Template settings could not be encoded.
 try {
     $conn->begin_transaction();
     if ($templateId > 0) {
-        $stmt = $conn->prepare('UPDATE quotation_templates SET template_name = ?, description = NULLIF(?, ''), is_active = ? WHERE id = ?');
+        $stmt = $conn->prepare("UPDATE quotation_templates SET template_name = ?, description = NULLIF(?, ''), is_active = ? WHERE id = ?");
         $stmt->bind_param('ssii', $name, $description, $isActive, $templateId);
         $stmt->execute(); $stmt->close();
         $check = $conn->prepare('SELECT id FROM quotation_templates WHERE id = ? LIMIT 1');
@@ -82,7 +82,7 @@ try {
         if (!$exists) throw new RuntimeException('Template not found.');
     } else {
         $key = 'tpl-' . bin2hex(random_bytes(12));
-        $stmt = $conn->prepare('INSERT INTO quotation_templates (template_key, template_name, description, is_active, created_by) VALUES (?, ?, NULLIF(?, ''), ?, ?)');
+        $stmt = $conn->prepare("INSERT INTO quotation_templates (template_key, template_name, description, is_active, created_by) VALUES (?, ?, NULLIF(?, ''), ?, ?)");
         $adminId = (int)$_SESSION['user_id'];
         $stmt->bind_param('sssii', $key, $name, $description, $isActive, $adminId);
         $stmt->execute(); $templateId = (int)$conn->insert_id; $stmt->close();
