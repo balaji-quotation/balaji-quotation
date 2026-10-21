@@ -99,16 +99,16 @@ if (!empty($_SESSION['name'])) {
 
     <meta charset="utf-8" />
 
-    <title>Product Tracking ERP | Unicorn Technoflex</title>
+    <title>Quotation SaaS | Balaji Webtech</title>
 
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0">
 
     <meta name="description"
-          content="Unicorn Technoflex Product Tracking ERP">
+          content="Balaji Webtech Quotation SaaS">
 
     <meta name="author"
-          content="Unicorn Technoflex">
+          content="Balaji Webtech">
 
     <meta http-equiv="X-UA-Compatible"
           content="IE=edge" />
