@@ -257,9 +257,6 @@ include("../includes/sidebar.php");
     placeholder="+91 9876543210"
 >
 
-</div>
-
-
 <div class="client-help">Enter a mobile number here or provide an alternate mobile number.</div>
 
 </div>
