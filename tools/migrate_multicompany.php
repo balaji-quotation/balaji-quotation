@@ -9,7 +9,8 @@ declare(strict_types=1);
  *
  * Usage:
  *   php tools/migrate_multicompany.php
- *   php tools/migrate_multicompany.php --apply --backup-verified --maintenance-confirmed
+ *   php tools/migrate_multicompany.php --initial-company-name="Balaji Webtech"
+ *   php tools/migrate_multicompany.php --apply --backup-verified --maintenance-confirmed --initial-company-name="Balaji Webtech"
  */
 if (PHP_SAPI !== 'cli') {
     http_response_code(404);
@@ -27,9 +28,23 @@ mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $apply = in_array('--apply', $argv, true);
 $backupVerified = in_array('--backup-verified', $argv, true);
 $maintenanceConfirmed = in_array('--maintenance-confirmed', $argv, true);
-$allowedArgs = ['--apply', '--backup-verified', '--maintenance-confirmed'];
+$initialCompanyName = null;
+$initialCompanyNameSeen = false;
 foreach (array_slice($argv, 1) as $arg) {
-    if (!in_array($arg, $allowedArgs, true)) {
+    if (str_starts_with($arg, '--initial-company-name=')) {
+        if ($initialCompanyNameSeen) {
+            fwrite(STDERR, "Specify --initial-company-name only once.\n");
+            exit(2);
+        }
+        $initialCompanyNameSeen = true;
+        $initialCompanyName = trim(substr($arg, strlen('--initial-company-name=')));
+        if ($initialCompanyName === '' || mb_strlen($initialCompanyName, 'UTF-8') > 255) {
+            fwrite(STDERR, "--initial-company-name must be between 1 and 255 characters.\n");
+            exit(2);
+        }
+        continue;
+    }
+    if (!in_array($arg, ['--apply', '--backup-verified', '--maintenance-confirmed'], true)) {
         fwrite(STDERR, "Unknown option: {$arg}\n");
         exit(2);
     }
@@ -135,9 +150,19 @@ $legacyResult = $conn->query(
     'SELECT company_name, company_address, gst_no, phone, email, website FROM quotation_company_settings WHERE id = 1 LIMIT 1'
 );
 $legacy = $legacyResult->fetch_assoc();
-if (!$legacy || trim((string)($legacy['company_name'] ?? '')) === '') {
-    fwrite(STDERR, "Preflight failed; no named legacy company settings row (id=1) exists. Resolve the initial-company mapping before migration.\n");
-    exit(3);
+$legacyCompanyName = trim((string)($legacy['company_name'] ?? ''));
+if ($legacyCompanyName === '') {
+    if ($initialCompanyName === null) {
+        fwrite(STDERR, "Preflight failed; no named legacy company settings row (id=1) exists. Supply the owner-confirmed --initial-company-name value.\n");
+        exit(3);
+    }
+    $migrationCompanyName = $initialCompanyName;
+} else {
+    if ($initialCompanyName !== null && strcasecmp($legacyCompanyName, $initialCompanyName) !== 0) {
+        fwrite(STDERR, "Preflight failed; --initial-company-name conflicts with quotation_company_settings row 1. Resolve the mapping before migration.\n");
+        exit(3);
+    }
+    $migrationCompanyName = $legacyCompanyName;
 }
 
 $databaseResult = $conn->query('SELECT DATABASE() AS db_name, VERSION() AS db_version');
@@ -150,7 +175,12 @@ if (empty($dbInfo['db_name'])) {
 echo "Multicompany SaaS migration preflight\n";
 echo 'Database: ' . $dbInfo['db_name'] . "\n";
 echo 'MySQL/MariaDB: ' . $dbInfo['db_version'] . "\n";
-echo "Initial company source: quotation_company_settings row 1 (company details are not printed)\n";
+if ($legacyCompanyName !== '') {
+    echo "Initial company source: quotation_company_settings row 1 (company details are not printed)\n";
+} else {
+    echo 'Initial company source: owner-confirmed mapping (' . $migrationCompanyName . "); missing legacy profile fields will remain blank.\n";
+    echo "A minimal quotation_company_settings row will be created for this company.\n";
+}
 echo "Existing tenant mapping: all current rows in the selected tenant tables map to the initial company.\n";
 echo "Legacy tables and primary keys will be retained. No quotation rows, IDs, numbers, or revision links are rewritten.\n";
 echo "Current database table row counts (metadata only; no row contents):\n";
@@ -209,16 +239,27 @@ try {
     migrationEnsureColumn($conn, 'companies', 'paid_start_date', 'DATE DEFAULT NULL');
     migrationEnsureColumn($conn, 'companies', 'paid_end_date', 'DATE DEFAULT NULL');
 
-    $stmt = $conn->prepare(
-        "INSERT INTO companies
-            (company_name, slug, billing_address, gstin, mobile, email, status)
-         SELECT company_name, 'legacy-company', company_address, gst_no, phone, email, 'Active'
-         FROM quotation_company_settings
-         WHERE id = 1
-         ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)"
-    );
-    $stmt->execute();
-    $stmt->close();
+    if ($legacyCompanyName !== '') {
+        $stmt = $conn->prepare(
+            "INSERT INTO companies
+                (company_name, slug, billing_address, gstin, mobile, email, status)
+             SELECT company_name, 'legacy-company', company_address, gst_no, phone, email, 'Active'
+             FROM quotation_company_settings
+             WHERE id = 1
+             ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)"
+        );
+        $stmt->execute();
+        $stmt->close();
+    } else {
+        $stmt = $conn->prepare(
+            "INSERT INTO companies (company_name, slug, status)
+             VALUES (?, 'legacy-company', 'Active')
+             ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)"
+        );
+        $stmt->bind_param('s', $migrationCompanyName);
+        $stmt->execute();
+        $stmt->close();
+    }
 
     $conn->query(
         "CREATE TABLE IF NOT EXISTS template_change_requests (
@@ -291,6 +332,30 @@ try {
     $legacyCompanyId = (int)($companyResult->fetch_assoc()['id'] ?? 0);
     if ($legacyCompanyId <= 0) {
         throw new RuntimeException('Initial company row was not created.');
+    }
+    if ($legacyCompanyName === '') {
+        $settingsCheck = $conn->prepare('SELECT 1 FROM quotation_company_settings WHERE company_id = ? LIMIT 1');
+        $settingsCheck->bind_param('i', $legacyCompanyId);
+        $settingsCheck->execute();
+        $settingsCheck->store_result();
+        $hasCompanySettings = $settingsCheck->num_rows > 0;
+        $settingsCheck->close();
+        if (!$hasCompanySettings) {
+            $settingsInsert = $conn->prepare(
+                'INSERT INTO quotation_company_settings (company_id, company_name) VALUES (?, ?)'
+            );
+            $settingsInsert->bind_param('is', $legacyCompanyId, $migrationCompanyName);
+            $settingsInsert->execute();
+            $settingsInsert->close();
+        }
+    }
+    $companyNameCheck = $conn->prepare('SELECT company_name FROM companies WHERE id = ? LIMIT 1');
+    $companyNameCheck->bind_param('i', $legacyCompanyId);
+    $companyNameCheck->execute();
+    $actualCompanyName = trim((string)($companyNameCheck->get_result()->fetch_assoc()['company_name'] ?? ''));
+    $companyNameCheck->close();
+    if (strcasecmp($actualCompanyName, $migrationCompanyName) !== 0) {
+        throw new RuntimeException('Existing legacy-company slug belongs to a different company name; refusing to remap it.');
     }
 
     $defaultConfig = json_encode([
