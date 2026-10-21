@@ -19,7 +19,7 @@ $config = [
     'calculation' => ['mode'=>'standard','formula'=>''],
     'rounding' => ['decimal_places'=>2,'mode'=>'half_up'],
     'tax' => ['gst_enabled'=>false,'gst_rate'=>0],
-    'totals' => ['show_subtotal'=>true,'show_total'=>true,'show_grand_total'=>true],
+    'totals' => ['show_line_amount'=>true,'show_subtotal'=>true,'show_tax'=>false,'show_grand_total'=>true],
     'print_layout' => 'Classic'
 ];
 if ($id) {
@@ -58,6 +58,7 @@ $err = $_SESSION['template_error'] ?? ''; unset($_SESSION['template_error']);
             <div class="col-md-3 mb-3"><label class="form-label">Rounding</label><select name="rounding_mode" class="form-select"><?php foreach (['half_up'=>'Half up','half_even'=>'Half even','ceil'=>'Round up','floor'=>'Round down'] as $key=>$label) { ?><option value="<?= $key ?>" <?= ($config['rounding']['mode'] ?? 'half_up') === $key ? 'selected' : '' ?>><?= templateEditEscape($label) ?></option><?php } ?></select></div>
             <div class="col-md-3 mb-3"><label class="form-label">GST rate (%)</label><input class="form-control" type="number" min="0" max="100" step="0.01" name="gst_rate" value="<?= templateEditEscape($config['tax']['gst_rate'] ?? 0) ?>"></div>
             <div class="col-md-3 mb-3"><label class="form-label">GST</label><select name="gst_enabled" class="form-select"><option value="0" <?= empty($config['tax']['gst_enabled']) ? 'selected' : '' ?>>Off</option><option value="1" <?= !empty($config['tax']['gst_enabled']) ? 'selected' : '' ?>>On</option></select></div>
+            <div class="col-md-2 mb-3"><label class="form-label">Show line amount</label><select name="show_line_amount" class="form-select"><option value="1" <?= !empty($config['totals']['show_line_amount'] ?? true) ? 'selected' : '' ?>>Yes</option><option value="0" <?= array_key_exists('show_line_amount', $config['totals']) && empty($config['totals']['show_line_amount']) ? 'selected' : '' ?>>No</option></select></div>
             <div class="col-md-2 mb-3"><label class="form-label">Show subtotal</label><select name="show_subtotal" class="form-select"><option value="1" <?= !empty($config['totals']['show_subtotal']) ? 'selected' : '' ?>>Yes</option><option value="0" <?= empty($config['totals']['show_subtotal']) ? 'selected' : '' ?>>No</option></select></div>
             <div class="col-md-2 mb-3"><label class="form-label">Show tax amount</label><select name="show_tax" class="form-select"><option value="1" <?= !empty($config['totals']['show_tax'] ?? $config['totals']['show_total'] ?? false) ? 'selected' : '' ?>>Yes</option><option value="0" <?= empty($config['totals']['show_tax'] ?? $config['totals']['show_total'] ?? false) ? 'selected' : '' ?>>No</option></select></div>
             <div class="col-md-2 mb-3"><label class="form-label">Show grand total</label><select name="show_grand_total" class="form-select"><option value="1" <?= !empty($config['totals']['show_grand_total']) ? 'selected' : '' ?>>Yes</option><option value="0" <?= empty($config['totals']['show_grand_total']) ? 'selected' : '' ?>>No</option></select></div>
