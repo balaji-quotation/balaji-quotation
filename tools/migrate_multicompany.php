@@ -224,7 +224,7 @@ while ($tableRow = $tableList->fetch_assoc()) {
 }
 echo "Planned tenant columns: users, clients, products, quotations, quotation_term_sets, quotation_company_settings, activity_log, quotation_templates.\n";
 echo "Existing quotation templates map to the initial company; new templates are company-scoped.\n";
-echo "Planned additive columns: companies.logo_path, products.default_rate.\n";
+echo "Planned additive columns: companies.logo_path, products.default_rate, template_change_requests.applied_template_version_id.\n";
 echo "No application writes may run concurrently with apply; use a maintenance window and verified restorable backup.\n";
 if (!$apply) {
     echo "DRY RUN ONLY. No schema or data changes were made.\n";
@@ -300,6 +300,7 @@ try {
             details TEXT NOT NULL,
             status ENUM('Pending','In Review','Approved','Rejected','Completed') NOT NULL DEFAULT 'Pending',
             admin_note TEXT DEFAULT NULL,
+            applied_template_version_id INT UNSIGNED DEFAULT NULL,
             reviewed_by INT DEFAULT NULL,
             reviewed_at DATETIME DEFAULT NULL,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -349,6 +350,16 @@ try {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
 
+    migrationEnsureColumn($conn, 'template_change_requests', 'applied_template_version_id', 'INT UNSIGNED DEFAULT NULL');
+    migrationEnsureColumn($conn, 'template_change_requests', 'applied_template_version_id', 'INT UNSIGNED DEFAULT NULL');
+    if (!migrationIndexExists($conn, 'template_change_requests', 'idx_template_requests_applied_version')) {
+        $conn->query('ALTER TABLE template_change_requests ADD INDEX idx_template_requests_applied_version (applied_template_version_id)');
+    }
+    if (!migrationForeignKeyExists($conn, 'template_change_requests', 'fk_template_request_applied_version')) {
+        $conn->query(
+            'ALTER TABLE template_change_requests ADD CONSTRAINT fk_template_request_applied_version FOREIGN KEY (applied_template_version_id) REFERENCES quotation_template_versions (id) ON DELETE RESTRICT'
+        );
+    }
     migrationEnsureColumn($conn, 'users', 'assigned_template_version_id', 'INT UNSIGNED DEFAULT NULL');
     migrationEnsureColumn($conn, 'quotations', 'template_version_id', 'INT UNSIGNED DEFAULT NULL');
     migrationEnsureColumn($conn, 'quotations', 'template_config_snapshot', 'LONGTEXT DEFAULT NULL');
