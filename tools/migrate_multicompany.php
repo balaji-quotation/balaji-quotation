@@ -425,14 +425,14 @@ try {
             $settingsInsert->close();
         }
     }
-    $stmt = $conn->prepare(
-        "UPDATE users SET company_id = ? WHERE company_id IS NULL"
-    );
-    $stmt->bind_param('i', $legacyCompanyId);
-    $stmt->execute();
-    $stmt->close();
-    foreach (['clients', 'products', 'quotations', 'quotation_term_sets', 'quotation_company_settings', 'activity_log'] as $table) {
-        $stmt = $conn->prepare("UPDATE `{$table}` SET company_id = ? WHERE company_id IS NULL");
+    foreach (array_merge(['users'], array_values(array_diff($requiredTables, ['users']))) as $table) {
+        $updateSql = "UPDATE `{$table}` SET company_id = ?";
+        if (migrationColumnExists($conn, $table, 'updated_at')) {
+            // Explicitly preserve legacy timestamps; MySQL otherwise refreshes ON UPDATE columns.
+            $updateSql .= ', updated_at = updated_at';
+        }
+        $updateSql .= ' WHERE company_id IS NULL';
+        $stmt = $conn->prepare($updateSql);
         $stmt->bind_param('i', $legacyCompanyId);
         $stmt->execute();
         $stmt->close();
@@ -446,16 +446,22 @@ try {
         }
     }
 
-    $userTemplateStmt = $conn->prepare(
-        'UPDATE users SET assigned_template_version_id = ? WHERE company_id = ? AND assigned_template_version_id IS NULL'
-    );
+    $userTemplateSql = 'UPDATE users SET assigned_template_version_id = ?';
+    if (migrationColumnExists($conn, 'users', 'updated_at')) {
+        $userTemplateSql .= ', updated_at = updated_at';
+    }
+    $userTemplateSql .= ' WHERE company_id = ? AND assigned_template_version_id IS NULL';
+    $userTemplateStmt = $conn->prepare($userTemplateSql);
     $userTemplateStmt->bind_param('ii', $legacyVersionId, $legacyCompanyId);
     $userTemplateStmt->execute();
     $userTemplateStmt->close();
 
-    $quotationTemplateStmt = $conn->prepare(
-        'UPDATE quotations SET template_version_id = ?, template_config_snapshot = ? WHERE company_id = ? AND template_version_id IS NULL'
-    );
+    $quotationTemplateSql = 'UPDATE quotations SET template_version_id = ?, template_config_snapshot = ?';
+    if (migrationColumnExists($conn, 'quotations', 'updated_at')) {
+        $quotationTemplateSql .= ', updated_at = updated_at';
+    }
+    $quotationTemplateSql .= ' WHERE company_id = ? AND template_version_id IS NULL';
+    $quotationTemplateStmt = $conn->prepare($quotationTemplateSql);
     $quotationTemplateStmt->bind_param('isi', $legacyVersionId, $defaultConfig, $legacyCompanyId);
     $quotationTemplateStmt->execute();
     $quotationTemplateStmt->close();
