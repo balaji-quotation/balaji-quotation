@@ -17,6 +17,10 @@ if (!isset($_SESSION['user_id'])) {
 // =====================================================
 
 require_once __DIR__ . "/../includes/db.php";
+require_once __DIR__ . '/../includes/permissions.php';
+erpRequireCompanyUser($conn);
+erpRequire('products.edit');
+$companyId = erpCurrentCompanyId();
 
 
 // =====================================================
@@ -54,6 +58,7 @@ $get_stmt = mysqli_prepare(
         product_image
     FROM products
     WHERE id = ?
+      AND company_id = ?
     LIMIT 1
     "
 );
@@ -72,8 +77,9 @@ if (!$get_stmt) {
 
 mysqli_stmt_bind_param(
     $get_stmt,
-    "i",
-    $id
+    "ii",
+    $id,
+    $companyId
 );
 
 mysqli_stmt_execute($get_stmt);
@@ -850,6 +856,7 @@ $update_stmt =
             updated_at = NOW()
 
         WHERE id = ?
+          AND company_id = ?
 
         LIMIT 1
         "
@@ -909,7 +916,7 @@ if (!$update_stmt) {
 
 mysqli_stmt_bind_param(
     $update_stmt,
-    "ssssssssddsssssi",
+    "ssssssssddsssssii",
 
     $product_code,
     $product_name,
@@ -926,7 +933,8 @@ mysqli_stmt_bind_param(
     $drawing_file,
     $product_image,
     $remarks,
-    $id
+    $id,
+    $companyId
 );
 
 
