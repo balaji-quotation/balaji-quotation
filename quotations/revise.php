@@ -1437,7 +1437,7 @@ foreach (
         </div>
 
         <div class="quote-section-note">
-            Existing rates and values are loaded. Change only what is required.
+            The source quotation's assigned template is retained. Add rows or edit item values as needed.
         </div>
 
     </div>
@@ -1448,8 +1448,9 @@ foreach (
             type="button"
             class="btn btn-outline-primary btn-sm"
             id="addColumn"
+            disabled
         >
-            + Column
+            Columns fixed by source template
         </button>
 
         <button
@@ -1851,7 +1852,7 @@ document.addEventListener(
 
                                 <input
                                     type="text"
-                                    name="column_label[]"
+                                    name="column_label[]" disabled
                                     class="form-control form-control-sm column-label-input"
                                     data-index="${index}"
                                     value="${escapeHtml(column.label)}"
@@ -1866,7 +1867,7 @@ document.addEventListener(
 
                                 <input
                                     type="text"
-                                    name="column_unit[]"
+                                    name="column_unit[]" disabled
                                     class="form-control form-control-sm column-unit-input"
                                     data-index="${index}"
                                     value="${escapeHtml(column.unit || "")}"
@@ -1880,7 +1881,7 @@ document.addEventListener(
                                 </label>
 
                                 <select
-                                    name="column_type[]"
+                                    name="column_type[]" disabled
                                     class="form-select form-select-sm column-type-input"
                                     data-index="${index}"
                                 >
@@ -1908,7 +1909,7 @@ document.addEventListener(
                                 </label>
 
                                 <select
-                                    name="column_align[]"
+                                    name="column_align[]" disabled
                                     class="form-select form-select-sm column-align-input"
                                     data-index="${index}"
                                 >
@@ -1930,6 +1931,7 @@ document.addEventListener(
                                 <button
                                     type="button"
                                     class="btn btn-outline-danger btn-sm remove-column"
+                                    disabled
                                     data-index="${index}"
                                 >
                                     ×
