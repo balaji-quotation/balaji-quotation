@@ -36,6 +36,12 @@ Approved Super Admin dashboard menus: Dashboard, Manage Companies, Manage Users,
 
 This is a source-level audit of the committed baseline, not a production database inspection. The currently available local execution environment could not run PHP or MySQL tests, so runtime verification remains a required implementation gate.
 
+## Owner-confirmed legacy company mapping
+
+- The owner confirmed Balaji Webtech as the initial company for existing ERP records because the supplied SQL export and connected local database had no named `quotation_company_settings` row at `id=1`.
+- The migration CLI accepts `--initial-company-name="Balaji Webtech"` for this owner-confirmed fallback. If the settings row is absent, apply creates the initial company and a minimal company-settings row; unavailable profile fields remain blank for the Super Admin to complete later.
+- A read-only preflight against the local `quotations` database found zero company-settings rows and stopped before any changes. No database write has been run.
+
 ## Implementation sequence
 
 1. Create and review a schema inventory and record-count baseline from the supplied legacy database export, without exposing row contents. Map the existing single-company records to the initial SaaS company using an explicit migration rule.
