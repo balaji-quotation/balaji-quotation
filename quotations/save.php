@@ -675,12 +675,16 @@ $templateRow = mysqli_stmt_get_result($templateStmt);
 $templateRow = $templateRow ? mysqli_fetch_assoc($templateRow) : null;
 mysqli_stmt_close($templateStmt);
 if (!$templateRow) {
-    throw new RuntimeException("No active quotation template is assigned to this user.");
+    $_SESSION['quotation_error'] = "No active quotation template is assigned to this user. Contact your administrator.";
+    header("Location: add.php");
+    exit;
 }
 $templateVersionId = (int)$templateRow['id'];
 $templateSnapshot = (string)$templateRow['config_json'];
 if (!is_array(json_decode($templateSnapshot, true))) {
-    throw new RuntimeException("Assigned quotation template is invalid.");
+    $_SESSION['quotation_error'] = "Assigned quotation template is invalid. Contact your administrator.";
+    header("Location: add.php");
+    exit;
 }
 
 
