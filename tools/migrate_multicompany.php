@@ -354,7 +354,7 @@ try {
             ['label' => 'Rate', 'unit' => 'INR/PCS', 'type' => 'currency', 'align' => 'right']
         ],
         'commercial_terms' => [
-            ['particular' => 'INCO Terms', 'value' => 'Ex-Works, Unicorn Technoflex – Bhojpara, Gondal, Rajkot.'],
+            ['particular' => 'INCO Terms', 'value' => 'Ex-Works, Seller's works unless otherwise agreed.'],
             ['particular' => 'Taxes', 'value' => 'GST as applicable.'],
             ['particular' => 'Payment Terms', 'value' => 'As mutually agreed / as per Purchase Order.'],
             ['particular' => 'Delivery / Lead Time', 'value' => 'As mutually agreed / as per Purchase Order.'],
@@ -366,7 +366,7 @@ try {
             'All applicable taxes at the time of delivery will be charged as per Government of India rules prevailing on that date.',
             'The Seller does not accept any product liability except free replacement or refund against defective supplies.',
             'All commercial disputes shall be subject to Rajkot Jurisdiction only.',
-            'The Purchase Order must be issued in favour of "Unicorn Technoflex", quoting this Quotation Number as reference.'
+            'The Purchase Order must be issued in favour of the Seller, quoting this Quotation Number as reference.'
         ],
         'calculation' => ['mode' => 'standard', 'formula' => ''],
         'rounding' => ['decimal_places' => 2, 'mode' => 'half_up'],
