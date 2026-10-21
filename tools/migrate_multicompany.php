@@ -354,7 +354,7 @@ try {
             ['label' => 'Rate', 'unit' => 'INR/PCS', 'type' => 'currency', 'align' => 'right']
         ],
         'commercial_terms' => [
-            ['particular' => 'INCO Terms', 'value' => 'Ex-Works, Seller's works unless otherwise agreed.'],
+            ['particular' => 'INCO Terms', 'value' => 'Ex-Works, at the Seller's facility unless otherwise agreed.'],
             ['particular' => 'Taxes', 'value' => 'GST as applicable.'],
             ['particular' => 'Payment Terms', 'value' => 'As mutually agreed / as per Purchase Order.'],
             ['particular' => 'Delivery / Lead Time', 'value' => 'As mutually agreed / as per Purchase Order.'],
@@ -365,7 +365,7 @@ try {
             'This quotation is based on the details received from the Buyer at the time of enquiry. Any change in that information will affect the pricing.',
             'All applicable taxes at the time of delivery will be charged as per Government of India rules prevailing on that date.',
             'The Seller does not accept any product liability except free replacement or refund against defective supplies.',
-            'All commercial disputes shall be subject to Rajkot Jurisdiction only.',
+            'All commercial disputes shall be subject to the competent jurisdiction agreed in the accepted order.',
             'The Purchase Order must be issued in favour of the Seller, quoting this Quotation Number as reference.'
         ],
         'calculation' => ['mode' => 'standard', 'formula' => ''],
