@@ -47,7 +47,7 @@ function quotationTemplateEvaluateFormula(string $formula, array $variables): ?f
     $offset = 0;
     $length = strlen($formula);
     while ($offset < $length) {
-        if (preg_match('/\G\s*(qty|quantity|rate|price|amount|(?:\d+(?:\.\d*)?|\.\d+)|[()+\-*\/])\s*/Ai', $formula, $match, 0, $offset) !== 1) {
+        if (preg_match('/\G\s*(qty|quantity|rate|price|amount|(?:\d+(?:\.\d*)?|\.\d+)|[()+\-*\/])\s*/i', $formula, $match, 0, $offset) !== 1) {
             return null;
         }
         $token = strtolower($match[1]);
