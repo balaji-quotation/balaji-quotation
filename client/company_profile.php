@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includes/permissions.php';
 erpRequireCompanyUser($conn);
 $companyId = erpCurrentCompanyId();
 $stmt = $conn->prepare(
-    'SELECT company_name, contact_person, email, mobile, alternate_mobile, gstin, billing_address, city, state, pincode, status FROM companies WHERE id = ? LIMIT 1'
+    'SELECT company_name, contact_person, email, mobile, alternate_mobile, gstin, billing_address, city, state, pincode, status, logo_path FROM companies WHERE id = ? LIMIT 1'
 );
 $stmt->bind_param('i', $companyId);
 $stmt->execute();
@@ -28,6 +28,7 @@ include __DIR__ . '/../includes/sidebar.php';
 <div class="content-page"><div class="content"><div class="container-fluid">
     <div class="page-title-box"><h4 class="page-title">Company Profile</h4><p class="text-muted">Company details are managed by Balaji Webtech support.</p></div>
     <div class="card"><div class="card-body"><dl class="row mb-0">
+        <?php if (!empty($company['logo_path'])) { ?><dt class="col-sm-3">Logo</dt><dd class="col-sm-9"><img src="<?= profileEscape($company['logo_path']) ?>" alt="<?= profileEscape($company['company_name']) ?> logo" style="max-width:180px;max-height:90px;object-fit:contain"></dd><?php } ?>
         <dt class="col-sm-3">Company name</dt><dd class="col-sm-9"><?= profileEscape($company['company_name']) ?></dd>
         <dt class="col-sm-3">Contact person</dt><dd class="col-sm-9"><?= profileEscape($company['contact_person']) ?></dd>
         <dt class="col-sm-3">Email</dt><dd class="col-sm-9"><?= profileEscape($company['email']) ?></dd>
