@@ -20,6 +20,8 @@ if (!empty($_SESSION['company_id'])) {
 }
 
 include("includes/db.php");
+require_once __DIR__ . '/includes/permissions.php';
+erpRequireCompanyUser($conn);
 include("includes/header.php");
 include("includes/sidebar.php");
 
