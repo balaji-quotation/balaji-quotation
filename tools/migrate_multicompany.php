@@ -246,6 +246,41 @@ try {
         $conn->query("ALTER TABLE clients ADD COLUMN alternate_mobile VARCHAR(30) DEFAULT NULL");
     }
 
+    $conn->query(
+        "CREATE TABLE IF NOT EXISTS quotation_templates (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            template_key VARCHAR(100) NOT NULL,
+            template_name VARCHAR(150) NOT NULL,
+            description TEXT DEFAULT NULL,
+            is_active TINYINT(1) NOT NULL DEFAULT 1,
+            created_by INT DEFAULT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uq_quotation_templates_key (template_key),
+            KEY idx_quotation_templates_active (is_active)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+    $conn->query(
+        "CREATE TABLE IF NOT EXISTS quotation_template_versions (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            template_id INT UNSIGNED NOT NULL,
+            version_number INT UNSIGNED NOT NULL,
+            config_json LONGTEXT NOT NULL,
+            created_by INT DEFAULT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uq_template_version (template_id, version_number),
+            CONSTRAINT fk_template_version_template
+                FOREIGN KEY (template_id) REFERENCES quotation_templates (id)
+                ON DELETE RESTRICT
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+
+    migrationEnsureColumn($conn, 'users', 'assigned_template_version_id', 'INT UNSIGNED DEFAULT NULL');
+    migrationEnsureColumn($conn, 'quotations', 'template_version_id', 'INT UNSIGNED DEFAULT NULL');
+    migrationEnsureColumn($conn, 'quotations', 'template_config_snapshot', 'LONGTEXT DEFAULT NULL');
+
     foreach ($requiredTables as $table) {
         migrationAddTenantColumn($conn, $table);
     }
@@ -256,6 +291,68 @@ try {
     $legacyCompanyId = (int)($companyResult->fetch_assoc()['id'] ?? 0);
     if ($legacyCompanyId <= 0) {
         throw new RuntimeException('Initial company row was not created.');
+    }
+
+    $defaultConfig = json_encode([
+        'columns' => [
+            ['label' => 'Part No. / Drawing No.', 'unit' => '', 'type' => 'text', 'align' => 'left'],
+            ['label' => 'Description', 'unit' => '', 'type' => 'text', 'align' => 'left'],
+            ['label' => 'Material / Grade', 'unit' => '', 'type' => 'text', 'align' => 'left'],
+            ['label' => 'Qty / EAU', 'unit' => '', 'type' => 'number', 'align' => 'right'],
+            ['label' => 'Rate', 'unit' => 'INR/PCS', 'type' => 'currency', 'align' => 'right']
+        ],
+        'commercial_terms' => [
+            ['particular' => 'INCO Terms', 'value' => 'Ex-Works, Unicorn Technoflex – Bhojpara, Gondal, Rajkot.'],
+            ['particular' => 'Taxes', 'value' => 'GST as applicable.'],
+            ['particular' => 'Payment Terms', 'value' => 'As mutually agreed / as per Purchase Order.'],
+            ['particular' => 'Delivery / Lead Time', 'value' => 'As mutually agreed / as per Purchase Order.'],
+            ['particular' => 'Freight', 'value' => 'To be confirmed at the time of order.'],
+            ['particular' => 'Offer Validity', 'value' => '30 days from the date of this quotation.']
+        ],
+        'general_terms' => [
+            'This quotation is based on the details received from the Buyer at the time of enquiry. Any change in that information will affect the pricing.',
+            'All applicable taxes at the time of delivery will be charged as per Government of India rules prevailing on that date.',
+            'The Seller does not accept any product liability except free replacement or refund against defective supplies.',
+            'All commercial disputes shall be subject to Rajkot Jurisdiction only.',
+            'The Purchase Order must be issued in favour of "Unicorn Technoflex", quoting this Quotation Number as reference.'
+        ],
+        'calculation' => ['mode' => 'standard', 'formula' => ''],
+        'tax' => ['gst_enabled' => false, 'gst_rate' => 0],
+        'totals' => ['show_subtotal' => true, 'show_total' => true, 'show_grand_total' => true],
+        'print_layout' => 'Classic'
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($defaultConfig === false) {
+        throw new RuntimeException('Default template configuration could not be encoded.');
+    }
+    $templateKey = 'legacy-standard';
+    $templateName = 'Standard Quotation';
+    $templateDescription = 'Legacy quotation format preserved as the initial version.';
+    $templateStmt = $conn->prepare(
+        'INSERT INTO quotation_templates (template_key, template_name, description, is_active)
+         VALUES (?, ?, ?, 1) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)'
+    );
+    $templateStmt->bind_param('sss', $templateKey, $templateName, $templateDescription);
+    $templateStmt->execute();
+    $legacyTemplateId = (int)$conn->insert_id;
+    $templateStmt->close();
+
+    $versionNumber = 1;
+    $versionStmt = $conn->prepare(
+        'INSERT IGNORE INTO quotation_template_versions (template_id, version_number, config_json)
+         VALUES (?, ?, ?)'
+    );
+    $versionStmt->bind_param('iis', $legacyTemplateId, $versionNumber, $defaultConfig);
+    $versionStmt->execute();
+    $versionStmt->close();
+    $versionStmt = $conn->prepare(
+        'SELECT id FROM quotation_template_versions WHERE template_id = ? AND version_number = ? LIMIT 1'
+    );
+    $versionStmt->bind_param('ii', $legacyTemplateId, $versionNumber);
+    $versionStmt->execute();
+    $legacyVersionId = (int)($versionStmt->get_result()->fetch_assoc()['id'] ?? 0);
+    $versionStmt->close();
+    if ($legacyVersionId <= 0) {
+        throw new RuntimeException('Initial quotation template version was not created.');
     }
 
     // MySQL DDL auto-commits. Begin the data-mapping transaction only after all
@@ -281,6 +378,20 @@ try {
             throw new RuntimeException("Tenant backfill incomplete for table {$table}.");
         }
     }
+
+    $userTemplateStmt = $conn->prepare(
+        'UPDATE users SET assigned_template_version_id = ? WHERE company_id = ? AND assigned_template_version_id IS NULL'
+    );
+    $userTemplateStmt->bind_param('ii', $legacyVersionId, $legacyCompanyId);
+    $userTemplateStmt->execute();
+    $userTemplateStmt->close();
+
+    $quotationTemplateStmt = $conn->prepare(
+        'UPDATE quotations SET template_version_id = ?, template_config_snapshot = ? WHERE company_id = ? AND template_version_id IS NULL'
+    );
+    $quotationTemplateStmt->bind_param('isi', $legacyVersionId, $defaultConfig, $legacyCompanyId);
+    $quotationTemplateStmt->execute();
+    $quotationTemplateStmt->close();
 
     $conn->commit();
 } catch (Throwable $error) {
