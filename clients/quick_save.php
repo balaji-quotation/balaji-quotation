@@ -29,7 +29,7 @@ if (empty($_SESSION['csrf_token']) || $token === '' || !hash_equals($_SESSION['c
 $companyName = trim((string)($_POST['company_name'] ?? ''));
 $address = mb_substr(trim((string)($_POST['address'] ?? '')), 0, 5000, 'UTF-8');
 $mobile = trim((string)($_POST['mobile'] ?? ''));
-$alternateMobile = mb_substr(trim((string)($_POST['alternate_mobile'] ?? '')), 0, 30, 'UTF-8');
+$alternateMobile = trim((string)($_POST['alternate_mobile'] ?? ''));
 $email = trim((string)($_POST['email'] ?? ''));
 if ($companyName === '' || mb_strlen($companyName, 'UTF-8') > 150 || $address === '' || ($mobile === '' && $alternateMobile === '')) {
     quickClientReply(422, ['success' => false, 'message' => 'Name, billing address, and mobile or alternate mobile are required.']);
