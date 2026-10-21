@@ -79,6 +79,16 @@ function migrationCount(mysqli $db, string $table): int
     return (int)($row['n'] ?? 0);
 }
 
+function migrationEnsureColumn(mysqli $db, string $table, string $column, string $definition): void
+{
+    if (!preg_match('/^[A-Za-z0-9_]+$/', $table) || !preg_match('/^[A-Za-z0-9_]+$/', $column)) {
+        throw new RuntimeException('Unexpected schema identifier.');
+    }
+    if (!migrationColumnExists($db, $table, $column)) {
+        $db->query("ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$definition}");
+    }
+}
+
 function migrationAddTenantColumn(mysqli $db, string $table): void
 {
     if (!migrationColumnExists($db, $table, 'company_id')) {
@@ -180,6 +190,11 @@ try {
             state VARCHAR(100) DEFAULT NULL,
             pincode VARCHAR(20) DEFAULT NULL,
             status ENUM('Active','Inactive','Suspended') NOT NULL DEFAULT 'Active',
+            subscription_plan ENUM('Business','Premium') DEFAULT NULL,
+            trial_start_date DATE DEFAULT NULL,
+            trial_end_date DATE DEFAULT NULL,
+            paid_start_date DATE DEFAULT NULL,
+            paid_end_date DATE DEFAULT NULL,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
@@ -187,6 +202,12 @@ try {
             KEY idx_companies_status (status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
+
+    migrationEnsureColumn($conn, 'companies', 'subscription_plan', "ENUM('Business','Premium') DEFAULT NULL");
+    migrationEnsureColumn($conn, 'companies', 'trial_start_date', 'DATE DEFAULT NULL');
+    migrationEnsureColumn($conn, 'companies', 'trial_end_date', 'DATE DEFAULT NULL');
+    migrationEnsureColumn($conn, 'companies', 'paid_start_date', 'DATE DEFAULT NULL');
+    migrationEnsureColumn($conn, 'companies', 'paid_end_date', 'DATE DEFAULT NULL');
 
     $stmt = $conn->prepare(
         "INSERT INTO companies
