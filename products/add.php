@@ -8,6 +8,9 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 include("../includes/db.php");
+require_once __DIR__ . '/../includes/permissions.php';
+erpRequireCompanyUser($conn);
+erpRequire('products.add');
 include("../includes/header.php");
 include("../includes/sidebar.php");
 
