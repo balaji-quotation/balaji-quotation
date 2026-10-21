@@ -120,6 +120,9 @@ $product_code =
 $product_name =
     trim($_POST['product_name'] ?? '');
 
+$default_rate =
+    trim((string)($_POST['default_rate'] ?? ''));
+
 $part_number =
     trim($_POST['part_number'] ?? '');
 
@@ -196,6 +199,10 @@ if ($product_name === '') {
         "&msg=name_required"
     );
 
+    exit;
+}
+if ($default_rate !== '' && (!is_numeric($default_rate) || !is_finite((float)$default_rate) || (float)$default_rate < 0)) {
+    header("Location: edit.php?id=" . $id . "&msg=invalid_rate");
     exit;
 }
 
@@ -847,6 +854,7 @@ $update_stmt =
         SET
             product_code = ?,
             product_name = ?,
+            default_rate = NULLIF(?, ''),
             part_number = ?,
             drawing_number = ?,
             revision_no = ?,
@@ -923,10 +931,11 @@ if (!$update_stmt) {
 
 mysqli_stmt_bind_param(
     $update_stmt,
-    "ssssssssddsssssii",
+    "sssssssssddsssssii",
 
     $product_code,
     $product_name,
+    $default_rate,
     $part_number,
     $drawing_number,
     $revision_no,
