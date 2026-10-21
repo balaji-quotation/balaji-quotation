@@ -47,8 +47,8 @@ if ($companyName === '' || $adminName === '' || !filter_var($adminEmail, FILTER_
 if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
     companySaveFail('Enter a valid company email address.');
 }
-if (strlen($adminPassword) < 10) {
-    companySaveFail('Administrator password must be at least 10 characters.');
+if (strlen($adminPassword) < 12) {
+    companySaveFail('Administrator password must be at least 12 characters.');
 }
 
 $templateCheck = $conn->prepare(
