@@ -298,6 +298,7 @@ include("../includes/sidebar.php");
     type="email"
     name="email"
     class="form-control"
+    maxlength="100"
     value="<?= htmlspecialchars($row['email'] ?? ''); ?>"
     placeholder="client@company.com"
 >
