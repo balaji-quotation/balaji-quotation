@@ -6,6 +6,9 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+require_once __DIR__ . '/../includes/permissions.php';
+erpRequire('users.add');
+
 include("../includes/db.php");
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
