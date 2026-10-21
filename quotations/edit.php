@@ -899,7 +899,7 @@ foreach ($statuses as $status) {
         Quotation Table
     </div>
     <div class="quote-section-note">
-        Edit rate, quantity, description or table structure
+        Edit row values and terms. Table columns stay with the assigned quotation template.
     </div>
 </div>
 
@@ -908,8 +908,9 @@ foreach ($statuses as $status) {
         type="button"
         class="btn btn-outline-primary btn-sm"
         id="addColumnBtn"
+        disabled
     >
-        + Column
+        Columns fixed by template
     </button>
 
     <button
@@ -1441,6 +1442,7 @@ document.addEventListener(
                         <button
                             type="button"
                             class="column-remove"
+                            disabled
                             title="Remove Column"
                         >×</button>
 
@@ -1454,7 +1456,7 @@ document.addEventListener(
                             </label>
                             <input
                                 type="text"
-                                name="column_label[]"
+                                name="column_label[]" disabled
                                 class="form-control form-control-sm column-label"
                                 value=""
                                 required
@@ -1467,7 +1469,7 @@ document.addEventListener(
                             </label>
                             <input
                                 type="text"
-                                name="column_unit[]"
+                                name="column_unit[]" disabled
                                 class="form-control form-control-sm column-unit"
                                 value=""
                                 placeholder="KG / ₹/PCS"
@@ -1479,7 +1481,7 @@ document.addEventListener(
                                 Type
                             </label>
                             <select
-                                name="column_type[]"
+                                name="column_type[]" disabled
                                 class="form-select form-select-sm column-type"
                             >
                                 <option value="text">Text</option>
@@ -1494,7 +1496,7 @@ document.addEventListener(
                                 Align
                             </label>
                             <select
-                                name="column_align[]"
+                                name="column_align[]" disabled
                                 class="form-select form-select-sm column-align"
                             >
                                 <option value="left">Left</option>
