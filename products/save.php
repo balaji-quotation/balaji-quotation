@@ -22,6 +22,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header("Location: add.php");
     exit;
 }
+$csrfToken = (string)($_POST['csrf_token'] ?? '');
+if (empty($_SESSION['csrf_token']) || $csrfToken === '' || !hash_equals($_SESSION['csrf_token'], $csrfToken)) {
+    http_response_code(400);
+    exit('Invalid request token.');
+}
 
 
 // =====================================================
