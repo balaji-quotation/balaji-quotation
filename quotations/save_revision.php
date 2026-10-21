@@ -950,6 +950,8 @@ try {
             ?,
             ?,
             ?,
+            ?,
+            ?,
             ?
         )
     ";
@@ -968,6 +970,9 @@ try {
     }
 
 
+    $sourceTemplateVersionId = (int)($verify_row['template_version_id'] ?? 0);
+    $sourceTemplateSnapshot = (string)($verify_row['template_config_snapshot'] ?? '');
+
     mysqli_stmt_bind_param(
         $master_stmt,
         "sissssssssiiisiii",
@@ -982,8 +987,8 @@ try {
         $status,
         $remarks,
         $companyId,
-        $verify_row['template_version_id'],
-        $verify_row['template_config_snapshot'],
+        $sourceTemplateVersionId,
+        $sourceTemplateSnapshot,
         $source_quotation_id,
         $revision_root_id,
         $revision_no,
