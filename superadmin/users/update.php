@@ -31,8 +31,8 @@ if ($status === 'Active' && $existing['status'] !== 'Active') {
     $count->bind_param('i', $companyId); $count->execute(); $active = (int)($count->get_result()->fetch_assoc()['total'] ?? 0); $count->close();
     if ($limit === 0 || $active >= $limit) adminEditFail('The company has reached its active-user limit or has no plan.', $id);
 }
-$template = $conn->prepare('SELECT v.id FROM quotation_template_versions v JOIN quotation_templates t ON t.id=v.template_id WHERE v.id=? AND t.is_active=1 LIMIT 1');
-$template->bind_param('i', $templateVersionId); $template->execute(); $templateOk = $template->get_result()->fetch_assoc(); $template->close();
+$template = $conn->prepare('SELECT v.id FROM quotation_template_versions v JOIN quotation_templates t ON t.id=v.template_id WHERE v.id=? AND t.company_id=? AND t.is_active=1 LIMIT 1');
+$template->bind_param('ii', $templateVersionId, $companyId); $template->execute(); $templateOk = $template->get_result()->fetch_assoc(); $template->close();
 if (!$templateOk) adminEditFail('Choose an active quotation template version.', $id);
 $duplicate = $conn->prepare('SELECT id FROM users WHERE LOWER(email)=? AND id<>? LIMIT 1');
 $duplicate->bind_param('si', $email, $id); $duplicate->execute(); $duplicate->store_result(); $isDuplicate = $duplicate->num_rows > 0; $duplicate->close();
