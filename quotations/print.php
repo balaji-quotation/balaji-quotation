@@ -709,9 +709,9 @@ $page_size =
         ? 'A4 landscape'
         : 'A4 portrait';
 
-$logo_url = '';
+$logo_url = printImageUrl($company['logo_image'] ?? '');
 
-$seal_signature_url = '';
+$seal_signature_url = printImageUrl($company['seal_image'] ?? '');
 
 ?>
 <!DOCTYPE html>
@@ -1207,37 +1207,18 @@ th {
 <div class="company-header">
 
 <div class="company-left">
-
-    <img
-        src="<?= htmlspecialchars($logo_url); ?>"
-        alt="<?= htmlspecialchars((string)$company['company_name']); ?>"
-        class="company-logo"
-    >
-
+    <div class="company-name"><?= htmlspecialchars((string)$company['company_name']); ?></div>
+    <?php if ($logo_url !== '') { ?>
+        <img src="<?= htmlspecialchars($logo_url); ?>" alt="<?= htmlspecialchars((string)$company['company_name']); ?>" class="company-logo">
+    <?php } ?>
 </div>
 
 <div class="company-contact">
-
-    <div>
-        <strong>Address:</strong>
-        <?= htmlspecialchars($company['company_address']); ?>
-    </div>
-
-    <div>
-        <strong>GSTIN:</strong>
-        <?= htmlspecialchars($company['gst_no']); ?>
-    </div>
-
-    <div>
-        <strong>Email:</strong>
-        <?= htmlspecialchars($company['email']); ?>
-    </div>
-
-    <div>
-        <strong>Phone:</strong>
-        <?= htmlspecialchars($company['phone']); ?>
-    </div>
-
+    <?php foreach (['company_address' => 'Address', 'gst_no' => 'GSTIN', 'email' => 'Email', 'phone' => 'Phone', 'website' => 'Website'] as $contactKey => $contactLabel) { ?>
+        <?php if (!empty($company[$contactKey])) { ?>
+            <div><strong><?= htmlspecialchars($contactLabel); ?>:</strong> <?= htmlspecialchars((string)$company[$contactKey]); ?></div>
+        <?php } ?>
+    <?php } ?>
 </div>
 
 
@@ -1777,15 +1758,11 @@ foreach (
         For <?= htmlspecialchars((string)$company['company_name']); ?>
     </div>
 
-    <div class="signature-images">
-
-        <img
-            src="<?= htmlspecialchars($seal_signature_url); ?>"
-            alt="Company Seal and Authorized Signature"
-            class="seal-signature-image"
-        >
-
-    </div>
+    <?php if ($seal_signature_url !== '') { ?>
+        <div class="signature-images">
+            <img src="<?= htmlspecialchars($seal_signature_url); ?>" alt="Company Seal and Authorized Signature" class="seal-signature-image">
+        </div>
+    <?php } ?>
 
 
     <div class="signatory">
