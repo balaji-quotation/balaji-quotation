@@ -89,7 +89,7 @@ while (
 
 // =====================================================
 // PRODUCTS
-// Optional reference for faster manual RFQ entry later.
+// Company-scoped catalog for optional quotation row selection.
 // =====================================================
 
 $products = [];
@@ -1282,6 +1282,7 @@ document.addEventListener(
         // =================================================
 
         const defaultColumns = <?= json_encode($templateConfig['columns'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        const productCatalog = <?= json_encode($products, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
         let columns = Array.isArray(defaultColumns) && defaultColumns.length
             ? defaultColumns
             : [{label:"Description",unit:"",type:"text",align:"left"}];
@@ -1667,6 +1668,11 @@ document.addEventListener(
                 }
             );
 
+            const productTh = document.createElement("th");
+            productTh.style.minWidth = "190px";
+            productTh.textContent = "Product Master (optional)";
+            quotationColumns.appendChild(productTh);
+
             const actionTh =
                 document.createElement(
                     "th"
@@ -1688,11 +1694,35 @@ document.addEventListener(
         // RENDER QUOTATION TABLE
         // =================================================
 
+        function applyCatalogProduct(row, productId) {
+            const product = productCatalog.find(function (item) {
+                return String(item.id) === String(productId);
+            });
+            if (!product) return;
+
+            row.querySelectorAll("[data-cell-index]").forEach(function (input) {
+                const column = columns[Number(input.dataset.cellIndex)] || {};
+                const label = String(column.label || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+                let value = null;
+
+                if (/^(productcode|itemcode|code|sku)$/.test(label)) {
+                    value = product.product_code || "";
+                } else if (/^(partnumber|partno|part)$/.test(label)) {
+                    value = product.part_number || "";
+                } else if (/description|product|item|material|particular|details/.test(label)) {
+                    value = product.product_name || "";
+                }
+
+                if (value !== null && value !== "") input.value = value;
+            });
+        }
+
         function renderQuotationTable() {
 
             renderQuotationHeader();
 
             const existingValues = [];
+            const existingProductIds = [];
 
             quotationBody
                 .querySelectorAll(
@@ -1721,6 +1751,8 @@ document.addEventListener(
                         existingValues.push(
                             rowValues
                         );
+                        const productPicker = row.querySelector(".product-master-picker");
+                        existingProductIds.push(productPicker ? productPicker.value : "");
                     }
                 );
 
@@ -1826,6 +1858,33 @@ document.addEventListener(
                     }
                 );
 
+
+                const productTd = document.createElement("td");
+                const productPicker = document.createElement("select");
+                productPicker.name = `product_id[${rowIndex}]`;
+                productPicker.className = "form-select form-select-sm product-master-picker";
+
+                const emptyProductOption = document.createElement("option");
+                emptyProductOption.value = "";
+                emptyProductOption.textContent = "Manual entry";
+                productPicker.appendChild(emptyProductOption);
+
+                productCatalog.forEach(function (product) {
+                    const option = document.createElement("option");
+                    option.value = String(product.id);
+                    const code = String(product.product_code || "").trim();
+                    const name = String(product.product_name || "").trim();
+                    const part = String(product.part_number || "").trim();
+                    option.textContent = [code, name, part].filter(Boolean).join(" · ");
+                    productPicker.appendChild(option);
+                });
+
+                productPicker.value = existingProductIds[rowIndex] || "";
+                productPicker.addEventListener("change", function () {
+                    if (this.value !== "") applyCatalogProduct(tr, this.value);
+                });
+                productTd.appendChild(productPicker);
+                tr.appendChild(productTd);
 
                 const actionTd =
                     document.createElement(
