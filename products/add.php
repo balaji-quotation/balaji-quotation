@@ -213,6 +213,11 @@ include("../includes/sidebar.php");
                             </div>
 
 
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Default Rate (optional)</label>
+                                <input type="number" name="default_rate" class="form-control" min="0" step="0.0001" placeholder="Rate to suggest in new quotations">
+                            </div>
+
                             <!-- =================================================
                                  PART NUMBER
                             ================================================== -->
