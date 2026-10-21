@@ -8,6 +8,10 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 include("../includes/db.php");
+require_once __DIR__ . '/../includes/permissions.php';
+erpRequireCompanyUser($conn);
+erpRequire('products.edit');
+$companyId = erpCurrentCompanyId();
 include("../includes/header.php");
 include("../includes/sidebar.php");
 
@@ -29,7 +33,7 @@ if ($id <= 0) {
 
 $product = mysqli_query(
     $conn,
-    "SELECT * FROM products WHERE id = $id LIMIT 1"
+    "SELECT * FROM products WHERE id = $id AND company_id = $companyId LIMIT 1"
 );
 
 if (!$product) {
