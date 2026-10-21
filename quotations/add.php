@@ -1980,6 +1980,9 @@ document.addEventListener(
                                     `row_data[${rowIndex}][${columnIndex}]`;
                             }
                         );
+
+                    const productPicker = row.querySelector(".product-master-picker");
+                    if (productPicker) productPicker.name = `product_id[${rowIndex}]`;
                 }
             );
         }
