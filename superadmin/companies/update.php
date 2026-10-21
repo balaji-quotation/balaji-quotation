@@ -7,6 +7,8 @@ if (!isset($_SESSION['user_id'])) {
 require_once __DIR__ . '/../../includes/permissions.php';
 erpRequire('companies.edit');
 require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/quotation_numbering.php';
+require_once __DIR__ . '/../../includes/company_settings_sync.php';
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: index.php');
     exit;
@@ -28,11 +30,12 @@ $address = trim((string)($_POST['billing_address'] ?? ''));
 $city = trim((string)($_POST['city'] ?? ''));
 $state = trim((string)($_POST['state'] ?? ''));
 $pincode = trim((string)($_POST['pincode'] ?? ''));
+$quotationNumberFormat = trim((string)($_POST['quotation_prefix'] ?? ''));
 $status = trim((string)($_POST['status'] ?? ''));
 $allowedStatus = ['Active', 'Inactive', 'Suspended'];
 
-if (!$id || $id < 1 || $name === '' || ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) || !in_array($status, $allowedStatus, true)) {
-    $_SESSION['company_error'] = 'Check the company name, email, and status.';
+if (!$id || $id < 1 || $name === '' || ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) || !in_array($status, $allowedStatus, true) || !quotationNumberPatternIsValid($quotationNumberFormat)) {
+    $_SESSION['company_error'] = 'Check the company name, email, status, and quotation number format.';
     header('Location: ' . ($id ? 'edit.php?id=' . $id : 'index.php'));
     exit;
 }
@@ -45,7 +48,10 @@ $gstin = mb_substr($gstin, 0, 30, 'UTF-8');
 $city = mb_substr($city, 0, 100, 'UTF-8');
 $state = mb_substr($state, 0, 100, 'UTF-8');
 $pincode = mb_substr($pincode, 0, 20, 'UTF-8');
+$quotationNumberFormat = mb_substr($quotationNumberFormat, 0, 100, 'UTF-8');
 
+try {
+    $conn->begin_transaction();
 $stmt = $conn->prepare(
     "UPDATE companies
      SET company_name = ?, contact_person = NULLIF(?, ''), email = NULLIF(?, ''),
@@ -61,6 +67,29 @@ $stmt->bind_param(
 );
 $stmt->execute();
 $stmt->close();
+
+    syncQuotationCompanySettings(
+        $conn,
+        (int)$id,
+        $name,
+        $email,
+        $mobile,
+        $alternateMobile,
+        $gstin,
+        $address,
+        $city,
+        $state,
+        $pincode,
+        $quotationNumberFormat
+    );
+    $conn->commit();
+} catch (Throwable $error) {
+    $conn->rollback();
+    error_log('Company update failed: ' . $error->getMessage());
+    $_SESSION['company_error'] = 'The company could not be updated. Please review the details and retry.';
+    header('Location: edit.php?id=' . (int)$id);
+    exit;
+}
 $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 header('Location: index.php?updated=1');
 exit;
