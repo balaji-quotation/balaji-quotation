@@ -923,7 +923,7 @@ $term_sets_json =
         </div>
 
         <div class="quote-section-note">
-            Rename columns as per RFQ. Add only the columns and rows you need.
+            Columns are assigned by Super Admin. Add rows and enter item values below.
         </div>
 
     </div>
@@ -934,8 +934,9 @@ $term_sets_json =
             type="button"
             class="btn btn-outline-primary btn-sm"
             id="addColumn"
+            disabled
         >
-            + Column
+            Columns set by template
         </button>
 
         <button
@@ -1378,7 +1379,7 @@ document.addEventListener(
 
                                 <input
                                     type="text"
-                                    name="column_label[]"
+                                    name="column_label[]" disabled
                                     class="form-control form-control-sm column-label-input"
                                     data-index="${index}"
                                     value="${escapeHtml(column.label)}"
@@ -1393,7 +1394,7 @@ document.addEventListener(
 
                                 <input
                                     type="text"
-                                    name="column_unit[]"
+                                    name="column_unit[]" disabled
                                     class="form-control form-control-sm column-unit-input"
                                     data-index="${index}"
                                     value="${escapeHtml(column.unit)}"
@@ -1407,7 +1408,7 @@ document.addEventListener(
                                 </label>
 
                                 <select
-                                    name="column_type[]"
+                                    name="column_type[]" disabled
                                     class="form-select form-select-sm column-type-input"
                                     data-index="${index}"
                                 >
@@ -1435,7 +1436,7 @@ document.addEventListener(
                                 </label>
 
                                 <select
-                                    name="column_align[]"
+                                    name="column_align[]" disabled
                                     class="form-select form-select-sm column-align-input"
                                     data-index="${index}"
                                 >
@@ -1457,6 +1458,7 @@ document.addEventListener(
                                 <button
                                     type="button"
                                     class="btn btn-outline-danger btn-sm remove-column"
+                                    disabled
                                     data-index="${index}"
                                     title="Remove Column"
                                 >
