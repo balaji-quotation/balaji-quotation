@@ -39,6 +39,7 @@ $pincode = companyPost('pincode', 20);
 $adminName = companyPost('admin_name', 100);
 $adminEmail = strtolower(companyPost('admin_email', 100));
 $adminPassword = (string)($_POST['admin_password'] ?? '');
+$adminTemplateVersionId = filter_var($_POST['admin_template_version_id'] ?? null, FILTER_VALIDATE_INT);
 
 if ($companyName === '' || $adminName === '' || !filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
     companySaveFail('Company name, administrator name, and a valid administrator email are required.');
@@ -49,6 +50,17 @@ if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
 if (strlen($adminPassword) < 10) {
     companySaveFail('Administrator password must be at least 10 characters.');
 }
+
+$templateCheck = $conn->prepare(
+    "SELECT v.id FROM quotation_template_versions v
+     JOIN quotation_templates t ON t.id = v.template_id
+     WHERE v.id = ? AND t.is_active = 1 LIMIT 1"
+);
+$templateCheck->bind_param('i', $adminTemplateVersionId);
+$templateCheck->execute();
+$templateExists = $templateCheck->get_result()->fetch_assoc();
+$templateCheck->close();
+if (!$templateExists) companySaveFail('Choose an active quotation template version.');
 
 $check = $conn->prepare('SELECT id FROM users WHERE LOWER(email) = ? LIMIT 1');
 $check->bind_param('s', $adminEmail);
@@ -83,10 +95,10 @@ try {
     $companyInsert->close();
 
     $userInsert = $conn->prepare(
-        "INSERT INTO users (name, email, password, role, status, company_id)
-         VALUES (?, ?, ?, 'Administrator', 'Active', ?)"
+        "INSERT INTO users (name, email, password, role, status, company_id, assigned_template_version_id)
+         VALUES (?, ?, ?, 'Administrator', 'Active', ?, ?)"
     );
-    $userInsert->bind_param('sssi', $adminName, $adminEmail, $hash, $companyId);
+    $userInsert->bind_param('sssii', $adminName, $adminEmail, $hash, $companyId, $adminTemplateVersionId);
     $userInsert->execute();
     $userInsert->close();
     $conn->commit();
