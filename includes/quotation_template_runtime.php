@@ -165,3 +165,15 @@ function quotationTemplateRowAmount(array $row, array $columns, array $calculati
     }
     return $values['amount'];
 }
+
+function quotationTemplateRound(float $value, int $decimalPlaces = 2, string $mode = 'half_up'): float
+{
+    $decimalPlaces = max(0, min(4, $decimalPlaces));
+    if ($mode === 'ceil' || $mode === 'floor') {
+        $factor = 10 ** $decimalPlaces;
+        $scaled = $value * $factor;
+        return ($mode === 'ceil' ? ceil($scaled) : floor($scaled)) / $factor;
+    }
+    $roundMode = $mode === 'half_even' ? PHP_ROUND_HALF_EVEN : PHP_ROUND_HALF_UP;
+    return round($value, $decimalPlaces, $roundMode);
+}
