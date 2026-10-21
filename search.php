@@ -18,6 +18,9 @@ if (!isset($_SESSION['user_id'])) {
 // =====================================================
 
 include("includes/db.php");
+require_once __DIR__ . '/includes/permissions.php';
+erpRequireCompanyUser($conn);
+$companyId = erpCurrentCompanyId();
 
 
 // =====================================================
@@ -158,6 +161,7 @@ if ($q !== '') {
 
         LEFT JOIN products p
             ON p.id = cpi.product_id
+            AND p.company_id = c.company_id
 
 
 
@@ -337,17 +341,14 @@ if ($q !== '') {
            SEARCH
         ================================================= */
 
-        WHERE
-
-            cp.po_number LIKE ?
-
-            OR c.company_name LIKE ?
-
-            OR p.product_code LIKE ?
-
-            OR p.product_name LIKE ?
-
-            OR p.part_number LIKE ?
+        WHERE c.company_id = ?
+          AND (
+              cp.po_number LIKE ?
+              OR c.company_name LIKE ?
+              OR p.product_code LIKE ?
+              OR p.product_name LIKE ?
+              OR p.part_number LIKE ?
+          )
 
 
         ORDER BY cp.id DESC
@@ -369,7 +370,8 @@ if ($q !== '') {
 
     mysqli_stmt_bind_param(
         $stmt,
-        "sssss",
+        "isssss",
+        $companyId,
         $search,
         $search,
         $search,
