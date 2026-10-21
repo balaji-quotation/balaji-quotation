@@ -199,7 +199,12 @@ function erpPermissionMap()
 
         'clients.edit' => [
             'Administrator',
-            'Manager'
+            'Manager',
+            'Production',
+            'Quality',
+            'Dispatch',
+            'Accounts',
+            'User'
         ],
 
         'clients.delete' => [
@@ -430,21 +435,14 @@ function erpPermissionMap()
         // USERS
         // =================================================
 
-        'users.view' => [
-            'Administrator'
-        ],
+        // Client user administration is managed only by Super Admin.
+        'users.view' => [],
 
-        'users.add' => [
-            'Administrator'
-        ],
+        'users.add' => [],
 
-        'users.edit' => [
-            'Administrator'
-        ],
+        'users.edit' => [],
 
-        'users.status' => [
-            'Administrator'
-        ],
+        'users.status' => [],
 
 
         // =================================================
