@@ -389,12 +389,23 @@ if (
 }
 
 
-$rows = [];
+$posted_product_ids = $_POST['product_id'] ?? [];
+if (!is_array($posted_product_ids)) {
+    $posted_product_ids = [];
+}
 
+$productCheckStmt = $conn->prepare(
+    'SELECT id FROM products WHERE id = ? AND company_id = ? LIMIT 1'
+);
+if (!$productCheckStmt) {
+    quoteFail('Product selection could not be verified.');
+}
+
+$rows = [];
 
 foreach (
     $posted_rows
-    as $posted_row
+    as $postedIndex => $posted_row
 ) {
 
     if (
@@ -406,9 +417,26 @@ foreach (
     }
 
 
+    $rawProductId = trim((string)($posted_product_ids[$postedIndex] ?? ''));
+    $productId = 0;
+    if ($rawProductId !== '') {
+        $validatedProductId = filter_var($rawProductId, FILTER_VALIDATE_INT);
+        if ($validatedProductId === false || $validatedProductId < 1) {
+            $productCheckStmt->close();
+            quoteFail('Invalid product selection.');
+        }
+        $productId = (int)$validatedProductId;
+        $productCheckStmt->bind_param('ii', $productId, $companyId);
+        $productCheckStmt->execute();
+        if ($productCheckStmt->get_result()->num_rows !== 1) {
+            $productCheckStmt->close();
+            quoteFail('Selected product does not belong to your company.');
+        }
+    }
+
     $row_json_data = [];
 
-    $has_value = false;
+    $has_value = $productId > 0;
 
 
     foreach (
@@ -474,6 +502,8 @@ foreach (
 
 
     $rows[] = [
+        'product_id' =>
+            $productId > 0 ? $productId : null,
         'item_reference' =>
             $item_reference,
 
@@ -916,7 +946,7 @@ try {
         (
             ?,
             ?,
-            NULL,
+            ?,
             ?,
             ?,
             NULL,
@@ -950,6 +980,9 @@ try {
         $sort_order =
             $row_no;
 
+        $product_id =
+            $row['product_id'];
+
         $item_reference =
             $row[
                 'item_reference'
@@ -974,9 +1007,10 @@ try {
 
         mysqli_stmt_bind_param(
             $row_stmt,
-            "iissi",
+            "iiissi",
             $quotation_id,
             $row_no,
+            $product_id,
             $item_reference,
             $row_json,
             $sort_order
@@ -1002,6 +1036,7 @@ try {
     mysqli_stmt_close(
         $row_stmt
     );
+    $productCheckStmt->close();
 
 
     // =================================================
