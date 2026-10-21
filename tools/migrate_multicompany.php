@@ -333,22 +333,6 @@ try {
     if ($legacyCompanyId <= 0) {
         throw new RuntimeException('Initial company row was not created.');
     }
-    if ($legacyCompanyName === '') {
-        $settingsCheck = $conn->prepare('SELECT 1 FROM quotation_company_settings WHERE company_id = ? LIMIT 1');
-        $settingsCheck->bind_param('i', $legacyCompanyId);
-        $settingsCheck->execute();
-        $settingsCheck->store_result();
-        $hasCompanySettings = $settingsCheck->num_rows > 0;
-        $settingsCheck->close();
-        if (!$hasCompanySettings) {
-            $settingsInsert = $conn->prepare(
-                'INSERT INTO quotation_company_settings (company_id, company_name) VALUES (?, ?)'
-            );
-            $settingsInsert->bind_param('is', $legacyCompanyId, $migrationCompanyName);
-            $settingsInsert->execute();
-            $settingsInsert->close();
-        }
-    }
     $companyNameCheck = $conn->prepare('SELECT company_name FROM companies WHERE id = ? LIMIT 1');
     $companyNameCheck->bind_param('i', $legacyCompanyId);
     $companyNameCheck->execute();
@@ -424,6 +408,23 @@ try {
     // MySQL DDL auto-commits. Begin the data-mapping transaction only after all
     // additive DDL has completed so the backfill itself can roll back atomically.
     $conn->begin_transaction();
+    if ($legacyCompanyName === '') {
+        if ($legacy !== null) {
+            $settingsInsert = $conn->prepare(
+                "UPDATE quotation_company_settings SET company_name = ? WHERE id = 1 AND (company_name IS NULL OR TRIM(company_name) = '')"
+            );
+            $settingsInsert->bind_param('s', $migrationCompanyName);
+            $settingsInsert->execute();
+            $settingsInsert->close();
+        } else {
+            $settingsInsert = $conn->prepare(
+                'INSERT INTO quotation_company_settings (company_id, company_name) VALUES (?, ?)'
+            );
+            $settingsInsert->bind_param('is', $legacyCompanyId, $migrationCompanyName);
+            $settingsInsert->execute();
+            $settingsInsert->close();
+        }
+    }
     $stmt = $conn->prepare(
         "UPDATE users SET company_id = ? WHERE company_id IS NULL"
     );
