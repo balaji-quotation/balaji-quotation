@@ -22,6 +22,29 @@ require_once __DIR__ . '/../includes/permissions.php';
 erpRequireCompanyUser($conn);
 erpRequire('quotations.add');
 $companyId = erpCurrentCompanyId();
+$userId = (int)$_SESSION['user_id'];
+$templateStmt = $conn->prepare(
+    "SELECT v.id, v.config_json
+     FROM users u
+     JOIN quotation_template_versions v ON v.id = u.assigned_template_version_id
+     JOIN quotation_templates t ON t.id = v.template_id
+     WHERE u.id = ? AND u.company_id = ? AND u.status = 'Active' AND t.is_active = 1
+     LIMIT 1"
+);
+$templateStmt->bind_param('ii', $userId, $companyId);
+$templateStmt->execute();
+$templateRow = $templateStmt->get_result()->fetch_assoc();
+$templateStmt->close();
+if (!$templateRow) {
+    http_response_code(409);
+    exit('No active quotation template is assigned to this user. Contact your administrator.');
+}
+$quotationTemplateVersionId = (int)$templateRow['id'];
+$templateConfig = json_decode($templateRow['config_json'], true);
+if (!is_array($templateConfig)) {
+    http_response_code(500);
+    exit('Assigned quotation template is invalid.');
+}
 include("../includes/header.php");
 include("../includes/sidebar.php");
 
@@ -1257,38 +1280,10 @@ document.addEventListener(
         // DEFAULT COLUMN DEFINITIONS
         // =================================================
 
-        let columns = [
-            {
-                label: "Part No. / Drawing No.",
-                unit: "",
-                type: "text",
-                align: "left"
-            },
-            {
-                label: "Description",
-                unit: "",
-                type: "text",
-                align: "left"
-            },
-            {
-                label: "Material / Grade",
-                unit: "",
-                type: "text",
-                align: "left"
-            },
-            {
-                label: "Qty / EAU",
-                unit: "",
-                type: "number",
-                align: "right"
-            },
-            {
-                label: "Rate",
-                unit: getCurrencySymbol() + "/PCS",
-                type: "currency",
-                align: "right"
-            }
-        ];
+        const defaultColumns = <?= json_encode($templateConfig['columns'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        let columns = Array.isArray(defaultColumns) && defaultColumns.length
+            ? defaultColumns
+            : [{label:"Description",unit:"",type:"text",align:"left"}];
 
 
         let rowCount = 1;
@@ -1298,45 +1293,8 @@ document.addEventListener(
         // DEFAULT COMMERCIAL TERMS
         // =================================================
 
-        const defaultCommercial = [
-            {
-                particular: "INCO Terms",
-                value: "Ex-Works, Unicorn Technoflex – Bhojpara, Gondal, Rajkot."
-            },
-            {
-                particular: "Taxes",
-                value: "GST as applicable."
-            },
-            {
-                particular: "Payment Terms",
-                value: "As mutually agreed / as per Purchase Order."
-            },
-            {
-                particular: "Delivery / Lead Time",
-                value: "As mutually agreed / as per Purchase Order."
-            },
-            {
-                particular: "Freight",
-                value: "To be confirmed at the time of order."
-            },
-            {
-                particular: "Offer Validity",
-                value: "30 days from the date of this quotation."
-            }
-        ];
-
-
-        // =================================================
-        // DEFAULT GENERAL TERMS
-        // =================================================
-
-        const defaultGeneral = [
-            "This quotation is based on the details received from the Buyer at the time of enquiry. Any change in that information will affect the pricing.",
-            "All applicable taxes at the time of delivery will be charged as per Government of India rules prevailing on that date.",
-            "The Seller does not accept any product liability except free replacement or refund against defective supplies.",
-            "All commercial disputes shall be subject to Rajkot Jurisdiction only.",
-            "The Purchase Order must be issued in favour of \"Unicorn Technoflex\", quoting this Quotation Number as reference."
-        ];
+        const defaultCommercial = <?= json_encode($templateConfig['commercial_terms'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        const defaultGeneral = <?= json_encode($templateConfig['general_terms'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
 
         // =================================================
