@@ -331,6 +331,11 @@ if (
 </div>
 
 
+<div class="col-md-6 mb-3">
+    <label class="form-label">Default Rate (optional)</label>
+    <input type="number" name="default_rate" class="form-control" min="0" step="0.0001" value="<?= htmlspecialchars((string)($row['default_rate'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+</div>
+
 <!-- =====================================================
      PART NUMBER
 ===================================================== -->
