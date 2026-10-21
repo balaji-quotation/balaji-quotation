@@ -709,7 +709,15 @@ $page_size =
         ? 'A4 landscape'
         : 'A4 portrait';
 
-$logo_url = printImageUrl($company['logo_image'] ?? '');
+$logo_path = '';
+$logoStmt = $conn->prepare('SELECT logo_path FROM companies WHERE id = ? LIMIT 1');
+if ($logoStmt) {
+    $logoStmt->bind_param('i', $companyId);
+    $logoStmt->execute();
+    $logo_path = (string)($logoStmt->get_result()->fetch_assoc()['logo_path'] ?? '');
+    $logoStmt->close();
+}
+$logo_url = printImageUrl($logo_path);
 
 $seal_signature_url = printImageUrl($company['seal_image'] ?? '');
 
