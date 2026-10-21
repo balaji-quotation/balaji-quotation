@@ -822,6 +822,10 @@ if (
         Part No.
     </th>
 
+    <th class="text-end">
+        Default Rate
+    </th>
+
     <th>
         Material
     </th>
@@ -1028,6 +1032,13 @@ while (
         : '-';
     ?>
 
+</td>
+
+
+<td class="text-end">
+    <?= isset($row['default_rate']) && $row['default_rate'] !== null && $row['default_rate'] !== ''
+        ? htmlspecialchars(number_format((float)$row['default_rate'], 4, '.', ''), ENT_QUOTES, 'UTF-8')
+        : '-'; ?>
 </td>
 
 
@@ -1403,7 +1414,7 @@ else {
 <tr>
 
     <td
-        colspan="10"
+        colspan="11"
         class="
             text-center
             text-muted
