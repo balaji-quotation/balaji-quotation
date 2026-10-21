@@ -8,6 +8,10 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 require_once __DIR__ . "/../includes/db.php";
+require_once __DIR__ . '/../includes/permissions.php';
+erpRequireCompanyUser($conn);
+erpRequire('products.add');
+$companyId = erpCurrentCompanyId();
 
 
 // =====================================================
@@ -197,6 +201,7 @@ $check_stmt = mysqli_prepare(
     SELECT id
     FROM products
     WHERE product_code = ?
+      AND company_id = ?
     LIMIT 1
     "
 );
@@ -214,8 +219,9 @@ if (!$check_stmt) {
 
 mysqli_stmt_bind_param(
     $check_stmt,
-    "s",
-    $product_code
+    "si",
+    $product_code,
+    $companyId
 );
 
 mysqli_stmt_execute(
@@ -650,6 +656,7 @@ $insert_stmt =
         "
         INSERT INTO products
         (
+            company_id,
             product_code,
             product_name,
             part_number,
@@ -668,7 +675,7 @@ $insert_stmt =
         )
         VALUES
         (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
         "
     );
@@ -725,7 +732,8 @@ if (!$insert_stmt) {
 
 mysqli_stmt_bind_param(
     $insert_stmt,
-    "sssssssdsdsssss",
+    "isssssssdsdsssss",
+    $companyId,
     $product_code,
     $product_name,
     $part_number,
