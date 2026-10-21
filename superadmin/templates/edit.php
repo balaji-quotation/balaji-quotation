@@ -6,6 +6,7 @@ erpRequire('superadmin.templates');
 require_once __DIR__ . '/../../includes/db.php';
 $id = filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT);
 $template = null;
+$companies = $conn->query('SELECT id, company_name FROM companies ORDER BY company_name');
 $config = [
     'columns' => [
         ['label'=>'Part No. / Drawing No.','unit'=>'','type'=>'text','align'=>'left'],
@@ -23,7 +24,7 @@ $config = [
     'print_layout' => 'Classic'
 ];
 if ($id) {
-    $stmt = $conn->prepare('SELECT id, template_name, description, is_active FROM quotation_templates WHERE id = ? LIMIT 1');
+    $stmt = $conn->prepare('SELECT t.id, t.company_id, c.company_name, t.template_name, t.description, t.is_active FROM quotation_templates t JOIN companies c ON c.id = t.company_id WHERE t.id = ? LIMIT 1');
     $stmt->bind_param('i', $id); $stmt->execute(); $template = $stmt->get_result()->fetch_assoc(); $stmt->close();
     if (!$template) { header('Location: index.php'); exit; }
     $stmt = $conn->prepare('SELECT config_json, version_number FROM quotation_template_versions WHERE template_id = ? ORDER BY version_number DESC LIMIT 1');
@@ -45,6 +46,23 @@ $err = $_SESSION['template_error'] ?? ''; unset($_SESSION['template_error']);
     <form method="post" action="save.php">
         <input type="hidden" name="csrf_token" value="<?= templateEditEscape($_SESSION['csrf_token']) ?>">
         <input type="hidden" name="template_id" value="<?= (int)($template['id'] ?? 0) ?>">
+        <?php if ($template) { ?>
+            <div class="card mb-3"><div class="card-body">
+                <label class="form-label">Company</label>
+                <input class="form-control" value="<?= templateEditEscape($template['company_name']) ?>" readonly>
+                <small class="text-muted">A template stays with its company after creation.</small>
+            </div></div>
+        <?php } else { ?>
+            <div class="card mb-3"><div class="card-body">
+                <label class="form-label" for="template_company_id">Company *</label>
+                <select class="form-select" id="template_company_id" name="company_id" required>
+                    <option value="">Choose company</option>
+                    <?php while ($company = $companies->fetch_assoc()) { ?>
+                        <option value="<?= (int)$company['id'] ?>"><?= templateEditEscape($company['company_name']) ?></option>
+                    <?php } ?>
+                </select>
+            </div></div>
+        <?php } ?>
         <div class="card"><div class="card-body"><div class="row">
             <div class="col-md-6 mb-3"><label class="form-label">Template name *</label><input class="form-control" name="template_name" maxlength="150" required value="<?= templateEditEscape($template['template_name'] ?? '') ?>"></div>
             <div class="col-md-6 mb-3"><label class="form-label">Status</label><select name="is_active" class="form-select"><option value="1" <?= !isset($template['is_active']) || $template['is_active'] ? 'selected' : '' ?>>Active</option><option value="0" <?= isset($template['is_active']) && !$template['is_active'] ? 'selected' : '' ?>>Inactive</option></select></div>
