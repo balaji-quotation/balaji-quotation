@@ -675,6 +675,7 @@ function quotationStatusBadge($status)
 
     </div>
 
+    <?php if (empty($_SESSION['subscription_read_only'])) { ?>
     <a
         href="add.php"
         class="btn btn-primary btn-sm"
@@ -682,6 +683,9 @@ function quotationStatusBadge($status)
         <i class="mdi mdi-plus me-1"></i>
         New Quotation
     </a>
+    <?php } else { ?>
+    <span class="badge bg-warning text-dark">Read-only subscription</span>
+    <?php } ?>
 
 </div>
 
