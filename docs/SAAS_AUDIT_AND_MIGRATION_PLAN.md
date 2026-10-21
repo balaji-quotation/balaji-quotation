@@ -42,6 +42,14 @@ This is a source-level audit of the committed baseline, not a production databas
 - The migration CLI accepts `--initial-company-name="Balaji Webtech"` for this owner-confirmed fallback. If the settings row is absent, apply creates the initial company and a minimal company-settings row; unavailable profile fields remain blank for the Super Admin to complete later.
 - A read-only preflight against the local `quotations` database found zero company-settings rows and stopped before any changes. No database write has been run.
 
+## Latest migration verification
+
+- PHP 8.2 lint passed for `tools/migrate_multicompany.php`.
+- The read-only preflight passed against the local `quotations` database on MySQL 5.7.44 when supplied the owner-confirmed mapping. It printed metadata-only table counts and made no changes.
+- An isolated database clone was made from the local database; all 26 source table counts matched before migration. The migration applied and then applied a second time successfully on that clone.
+- After both runs, all 25 legacy tables with pre-existing data retained their row counts, primary-key sets, and original column contents, including `updated_at`; tenant-owned rows had no null company mapping, and user/quotation template assignments were present.
+- The source `quotations` database has not been migrated. The uploaded SQL export has the same table inventory/count baseline but does not include the company-settings row. A restore-from-export check and application/print regression checks remain before any source-database apply.
+
 ## Implementation sequence
 
 1. Create and review a schema inventory and record-count baseline from the supplied legacy database export, without exposing row contents. Map the existing single-company records to the initial SaaS company using an explicit migration rule.
