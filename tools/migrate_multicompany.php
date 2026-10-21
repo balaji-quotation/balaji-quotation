@@ -317,8 +317,9 @@ try {
             'The Purchase Order must be issued in favour of "Unicorn Technoflex", quoting this Quotation Number as reference.'
         ],
         'calculation' => ['mode' => 'standard', 'formula' => ''],
+        'rounding' => ['decimal_places' => 2, 'mode' => 'half_up'],
         'tax' => ['gst_enabled' => false, 'gst_rate' => 0],
-        'totals' => ['show_subtotal' => true, 'show_total' => true, 'show_grand_total' => true],
+        'totals' => ['show_subtotal' => false, 'show_tax' => false, 'show_grand_total' => false],
         'print_layout' => 'Classic'
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     if ($defaultConfig === false) {
