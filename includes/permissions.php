@@ -524,6 +524,7 @@ function erpRequire($permission)
         if (
             in_array($permission, [
                 'clients.add', 'clients.edit', 'clients.delete',
+                'products.add', 'products.edit', 'products.delete',
                 'quotations.add', 'quotations.edit', 'quotations.delete'
             ], true)
         ) {
