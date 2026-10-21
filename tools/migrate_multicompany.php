@@ -354,7 +354,7 @@ try {
             ['label' => 'Rate', 'unit' => 'INR/PCS', 'type' => 'currency', 'align' => 'right']
         ],
         'commercial_terms' => [
-            ['particular' => 'INCO Terms', 'value' => 'Ex-Works, at the Seller's facility unless otherwise agreed.'],
+            ['particular' => 'INCO Terms', 'value' => 'Ex-Works, at the Seller facility unless otherwise agreed.'],
             ['particular' => 'Taxes', 'value' => 'GST as applicable.'],
             ['particular' => 'Payment Terms', 'value' => 'As mutually agreed / as per Purchase Order.'],
             ['particular' => 'Delivery / Lead Time', 'value' => 'As mutually agreed / as per Purchase Order.'],
