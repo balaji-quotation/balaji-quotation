@@ -87,7 +87,10 @@ function erpRequireCompanyUser($database = null)
     }
 
     $companyId = erpCurrentCompanyId();
-    $stmt = $database->prepare('SELECT status FROM companies WHERE id = ? LIMIT 1');
+    $stmt = $database->prepare(
+        'SELECT status, subscription_plan, trial_start_date, trial_end_date, paid_start_date, paid_end_date
+         FROM companies WHERE id = ? LIMIT 1'
+    );
     $stmt->bind_param('i', $companyId);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
@@ -100,6 +103,23 @@ function erpRequireCompanyUser($database = null)
         }
         header('Location: /quotation/login.php?error=company');
         exit;
+    }
+
+    $today = (new DateTimeImmutable('now', new DateTimeZone('Asia/Kolkata')))->format('Y-m-d');
+    $trialActive = !empty($row['trial_start_date']) && !empty($row['trial_end_date'])
+        && $today >= $row['trial_start_date'] && $today <= $row['trial_end_date'];
+    $paidActive = !empty($row['paid_start_date']) && !empty($row['paid_end_date'])
+        && $today >= $row['paid_start_date'] && $today <= $row['paid_end_date'];
+
+    $_SESSION['subscription_state'] = $paidActive ? 'Paid' : ($trialActive ? 'Trial' : 'Read Only');
+    $_SESSION['subscription_read_only'] = !$paidActive && !$trialActive;
+}
+
+function erpRequireSubscriptionWrite(): void
+{
+    if (erpCurrentCompanyId() !== null && !empty($_SESSION['subscription_read_only'])) {
+        http_response_code(403);
+        exit('Subscription access is read-only. Contact Balaji Webtech to activate or renew your plan.');
     }
 }
 
@@ -503,6 +523,14 @@ function erpCan($permission)
 function erpRequire($permission)
 {
     if (erpCan($permission)) {
+        if (
+            in_array($permission, [
+                'clients.add', 'clients.edit', 'clients.delete',
+                'quotations.add', 'quotations.edit', 'quotations.delete'
+            ], true)
+        ) {
+            erpRequireSubscriptionWrite();
+        }
         return;
     }
 
