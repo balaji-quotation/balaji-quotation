@@ -732,13 +732,13 @@ $term_sets_json =
 <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="toggleQuickClient">+ Quick add customer</button>
 <div class="border rounded p-2 mt-2" id="quickClientPanel" style="display:none;">
     <div class="small fw-bold mb-2">Quick add customer</div>
-    <input type="text" id="quickClientName" class="form-control form-control-sm mb-2" placeholder="Customer / company name *" maxlength="255">
+    <input type="text" id="quickClientName" class="form-control form-control-sm mb-2" placeholder="Customer / company name *" maxlength="150">
     <textarea id="quickClientAddress" class="form-control form-control-sm mb-2" placeholder="Billing address *" rows="2"></textarea>
     <div class="row g-2">
-        <div class="col-6"><input type="text" id="quickClientMobile" class="form-control form-control-sm" placeholder="Mobile" maxlength="30"></div>
+        <div class="col-6"><input type="text" id="quickClientMobile" class="form-control form-control-sm" placeholder="Mobile" maxlength="20"></div>
         <div class="col-6"><input type="text" id="quickClientAltMobile" class="form-control form-control-sm" placeholder="Alternate mobile" maxlength="30"></div>
     </div>
-    <input type="email" id="quickClientEmail" class="form-control form-control-sm mt-2" placeholder="Email (optional)" maxlength="150">
+    <input type="email" id="quickClientEmail" class="form-control form-control-sm mt-2" placeholder="Email (optional)" maxlength="100">
     <div id="quickClientMessage" class="small mt-2" role="status"></div>
     <button type="button" class="btn btn-sm btn-primary mt-2" id="saveQuickClient">Save and select</button>
     <button type="button" class="btn btn-sm btn-light mt-2" id="cancelQuickClient">Cancel</button>
