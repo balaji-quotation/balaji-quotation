@@ -116,7 +116,7 @@ if (!empty($_SESSION['name'])) {
 
     <!-- Favicon -->
     <link rel="shortcut icon"
-          href="/quotation/dist/assets/images/unicornlogo.ico">
+          href="/quotation/dist/assets/images/logo-dark.png">
 
 
     <!-- Icons CSS -->
