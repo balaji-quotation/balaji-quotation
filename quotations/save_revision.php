@@ -688,7 +688,9 @@ try {
     $verify_sql = "
         SELECT
             id,
-            revision_of_quotation_id
+            revision_of_quotation_id,
+            template_version_id,
+            template_config_snapshot
         FROM quotations
         WHERE id = ?
           AND company_id = ?
@@ -925,6 +927,8 @@ try {
             status,
             remarks,
             company_id,
+            template_version_id,
+            template_config_snapshot,
             copied_from_quotation_id,
             revision_of_quotation_id,
             revision_no,
@@ -966,7 +970,7 @@ try {
 
     mysqli_stmt_bind_param(
         $master_stmt,
-        "sissssssssiiiii",
+        "sissssssssiiisiii",
         $quotation_no,
         $client_id,
         $rfq_no,
@@ -978,6 +982,8 @@ try {
         $status,
         $remarks,
         $companyId,
+        $verify_row['template_version_id'],
+        $verify_row['template_config_snapshot'],
         $source_quotation_id,
         $revision_root_id,
         $revision_no,
