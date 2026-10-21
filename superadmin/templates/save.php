@@ -78,6 +78,7 @@ $config = [
     'rounding'=>['decimal_places'=>(int)$decimalPlaces,'mode'=>$roundingMode],
     'tax'=>['gst_enabled'=>$gstEnabled,'gst_rate'=>round((float)$gstRate, 2)],
     'totals'=>[
+        'show_line_amount'=>(int)($_POST['show_line_amount'] ?? 0) === 1,
         'show_subtotal'=>(int)($_POST['show_subtotal'] ?? 0) === 1,
         'show_tax'=>(int)($_POST['show_tax'] ?? 0) === 1,
         'show_grand_total'=>(int)($_POST['show_grand_total'] ?? 0) === 1
