@@ -33,7 +33,7 @@ if ($mode === 'custom' && $formula === '') templateFail('Enter a formula when cu
 $columns = json_decode((string)($_POST['columns_json'] ?? ''), true);
 $commercial = json_decode((string)($_POST['commercial_terms_json'] ?? ''), true);
 $general = json_decode((string)($_POST['general_terms_json'] ?? ''), true);
-if (!is_array($columns) || count($columns) < 1 || count($columns) > 20 || !is_array($commercial) || !array_is_list($commercial) || !is_array($general) || !array_is_list($general)) templateFail('Columns and terms must be valid JSON arrays.');
+if (!is_array($columns) || !array_is_list($columns) || count($columns) < 1 || count($columns) > 20 || !is_array($commercial) || !array_is_list($commercial) || !is_array($general) || !array_is_list($general)) templateFail('Columns and terms must be valid JSON arrays.');
 $cleanColumns = [];
 foreach ($columns as $column) {
     if (!is_array($column)) templateFail('Each column must be an object.');
