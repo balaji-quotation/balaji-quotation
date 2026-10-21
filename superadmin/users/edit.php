@@ -9,7 +9,11 @@ if (!$id || $id < 1) { header('Location: index.php'); exit; }
 $stmt = $conn->prepare("SELECT id, company_id, name, email, role, status, assigned_template_version_id FROM users WHERE id = ? AND company_id IS NOT NULL LIMIT 1");
 $stmt->bind_param('i', $id); $stmt->execute(); $user = $stmt->get_result()->fetch_assoc(); $stmt->close();
 if (!$user) { header('Location: index.php'); exit; }
-$templates = $conn->query("SELECT t.template_name, v.id AS version_id, v.version_number FROM quotation_templates t JOIN quotation_template_versions v ON v.template_id=t.id WHERE t.is_active=1 AND v.version_number=(SELECT MAX(v2.version_number) FROM quotation_template_versions v2 WHERE v2.template_id=t.id) ORDER BY t.template_name");
+$templateQuery = $conn->prepare("SELECT t.template_name, v.id AS version_id, v.version_number FROM quotation_templates t JOIN quotation_template_versions v ON v.template_id=t.id WHERE t.company_id = ? AND t.is_active=1 AND v.version_number=(SELECT MAX(v2.version_number) FROM quotation_template_versions v2 WHERE v2.template_id=t.id) ORDER BY t.template_name");
+$templateQuery->bind_param('i', $user['company_id']);
+$templateQuery->execute();
+$templates = $templateQuery->get_result();
+$templateQuery->close();
 if (empty($_SESSION['csrf_token'])) $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 include __DIR__ . '/../../includes/header.php'; include __DIR__ . '/../../includes/superadmin_sidebar.php';
 function adminEditEscape($v): string { return htmlspecialchars((string)($v ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
