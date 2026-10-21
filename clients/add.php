@@ -213,7 +213,7 @@ include("../includes/sidebar.php");
     id="gstin"
     class="form-control text-uppercase"
     maxlength="15"
-    placeholder="24AAIFU3176H1Z1"
+    placeholder="15-character GSTIN"
 >
 
 <div class="client-help">
