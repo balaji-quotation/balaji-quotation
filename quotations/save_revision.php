@@ -335,121 +335,41 @@ if (
 
 
 // =====================================================
-// DYNAMIC COLUMNS
-// =====================================================
-
-$column_labels =
-    $_POST[
-        'column_label'
-    ] ?? [];
-
-$column_units =
-    $_POST[
-        'column_unit'
-    ] ?? [];
-
-$column_types =
-    $_POST[
-        'column_type'
-    ] ?? [];
-
-$column_aligns =
-    $_POST[
-        'column_align'
-    ] ?? [];
-
-
-if (!is_array($column_labels)) {
-    $column_labels = [];
+// Preserve the source quotation's historical template columns. Posted column edits are ignored.
+$sourceColumnsStmt = mysqli_prepare(
+    $conn,
+    "SELECT qc.column_key, qc.column_label, qc.unit_text, qc.data_type, qc.text_align
+     FROM quotation_columns qc
+     INNER JOIN quotations q ON q.id = qc.quotation_id
+     WHERE q.id = ? AND q.company_id = ? AND q.created_by = ? AND qc.is_visible = 1
+     ORDER BY qc.sort_order ASC, qc.id ASC"
+);
+if (!$sourceColumnsStmt) {
+    revisionFail("Unable to load the source quotation template.", $source_quotation_id);
 }
-
-if (!is_array($column_units)) {
-    $column_units = [];
-}
-
-if (!is_array($column_types)) {
-    $column_types = [];
-}
-
-if (!is_array($column_aligns)) {
-    $column_aligns = [];
-}
-
-
+mysqli_stmt_bind_param($sourceColumnsStmt, "iii", $source_quotation_id, $companyId, $userId);
+mysqli_stmt_execute($sourceColumnsStmt);
+$sourceColumnsResult = mysqli_stmt_get_result($sourceColumnsStmt);
 $columns = [];
-
-
-foreach (
-    $column_labels
-    as $source_index =>
-       $label
-) {
-
-    $label =
-        revisionClean(
-            $label
-        );
-
-    if ($label === '') {
-        continue;
-    }
-
-
+while ($sourceColumn = mysqli_fetch_assoc($sourceColumnsResult)) {
     $columns[] = [
-        'source_index' =>
-            intval(
-                $source_index
-            ),
-
-        'column_key' =>
-            'col_' .
-            (
-                count(
-                    $columns
-                ) + 1
-            ),
-
-        'column_label' =>
-            $label,
-
-        'unit_text' =>
-            revisionClean(
-                $column_units[
-                    $source_index
-                ] ?? ''
-            ),
-
-        'data_type' =>
-            revisionAllowedColumnType(
-                revisionClean(
-                    $column_types[
-                        $source_index
-                    ] ?? 'text'
-                )
-            ),
-
-        'text_align' =>
-            revisionAllowedAlign(
-                revisionClean(
-                    $column_aligns[
-                        $source_index
-                    ] ?? 'left'
-                )
-            )
+        'source_index' => count($columns),
+        'column_key' => (string)$sourceColumn['column_key'],
+        'column_label' => (string)$sourceColumn['column_label'],
+        'unit_text' => (string)($sourceColumn['unit_text'] ?? ''),
+        'data_type' => revisionAllowedColumnType($sourceColumn['data_type'] ?? 'text'),
+        'text_align' => revisionAllowedAlign($sourceColumn['text_align'] ?? 'left')
     ];
 }
-
-
-if (count($columns) === 0) {
-
-    revisionFail(
-        "At least one quotation column is required.",
-        $source_quotation_id
-    );
+mysqli_stmt_close($sourceColumnsStmt);
+if (!$columns) {
+    revisionFail("The source quotation has no active template columns.", $source_quotation_id);
 }
 
 
 // =====================================================
+
+
 // DYNAMIC ROWS
 // =====================================================
 
