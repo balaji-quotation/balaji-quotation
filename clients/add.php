@@ -236,6 +236,7 @@ include("../includes/sidebar.php");
     type="email"
     name="email"
     class="form-control"
+    maxlength="100"
     placeholder="client@company.com"
 >
 
