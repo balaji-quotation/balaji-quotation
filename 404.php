@@ -6,7 +6,7 @@ http_response_code(404);
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>404 - Page Not Found | Unicorn Technoflex ERP</title>
+    <title>404 - Page Not Found | Balaji Webtech Quotation SaaS</title>
     <style>
         * { box-sizing: border-box; }
         body {
