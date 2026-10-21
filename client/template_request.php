@@ -13,7 +13,11 @@ if (empty($_SESSION['csrf_token'])) {
 $error = $_SESSION['template_request_error'] ?? '';
 unset($_SESSION['template_request_error']);
 $stmt = $conn->prepare(
-    'SELECT id, title, status, created_at, admin_note FROM template_change_requests WHERE company_id = ? ORDER BY created_at DESC, id DESC LIMIT 100'
+    'SELECT r.id, r.title, r.status, r.created_at, r.admin_note, t.template_name AS applied_template_name, v.version_number AS applied_version_number
+     FROM template_change_requests r
+     LEFT JOIN quotation_template_versions v ON v.id = r.applied_template_version_id
+     LEFT JOIN quotation_templates t ON t.id = v.template_id
+     WHERE r.company_id = ? ORDER BY r.created_at DESC, r.id DESC LIMIT 100'
 );
 $companyId = erpCurrentCompanyId();
 $stmt->bind_param('i', $companyId);
@@ -37,9 +41,9 @@ include __DIR__ . '/../includes/sidebar.php';
         </form>
     </div></div>
     <div class="card"><div class="card-body table-responsive"><h5>Previous requests</h5>
-        <table class="table"><thead><tr><th>Title</th><th>Status</th><th>Submitted</th><th>Admin note</th></tr></thead><tbody>
+        <table class="table"><thead><tr><th>Title</th><th>Status</th><th>Applied version</th><th>Submitted</th><th>Admin note</th></tr></thead><tbody>
         <?php while ($request = $requests->fetch_assoc()) { ?>
-            <tr><td><?= templateRequestEscape($request['title']) ?></td><td><?= templateRequestEscape($request['status']) ?></td><td><?= templateRequestEscape(date('d-m-Y', strtotime($request['created_at']))) ?></td><td><?= templateRequestEscape($request['admin_note']) ?></td></tr>
+            <tr><td><?= templateRequestEscape($request['title']) ?></td><td><?= templateRequestEscape($request['status']) ?></td><td><?= !empty($request['applied_template_name']) ? templateRequestEscape($request['applied_template_name']) . ' · v' . (int)$request['applied_version_number'] : '—' ?></td><td><?= templateRequestEscape(date('d-m-Y', strtotime($request['created_at']))) ?></td><td><?= templateRequestEscape($request['admin_note']) ?></td></tr>
         <?php } ?>
         </tbody></table>
     </div></div>
