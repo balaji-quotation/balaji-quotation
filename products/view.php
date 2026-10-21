@@ -297,6 +297,18 @@ $priority =
 </div>
 
 
+<!-- DEFAULT RATE -->
+
+<div class="col-lg-3 col-md-4 mb-3">
+    <label class="text-muted">Default Rate</label>
+    <div class="fw-bold">
+        <?= isset($row['default_rate']) && $row['default_rate'] !== null && $row['default_rate'] !== ''
+            ? htmlspecialchars(number_format((float)$row['default_rate'], 4, '.', ''), ENT_QUOTES, 'UTF-8')
+            : '-'; ?>
+    </div>
+</div>
+
+
 <!-- PART NUMBER -->
 
 <div class="col-lg-3 col-md-4 mb-3">
