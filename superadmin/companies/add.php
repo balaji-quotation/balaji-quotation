@@ -7,6 +7,14 @@ if (!isset($_SESSION['user_id'])) {
 require_once __DIR__ . '/../../includes/permissions.php';
 erpRequire('companies.add');
 require_once __DIR__ . '/../../includes/db.php';
+$templateResult = $conn->query(
+    "SELECT t.template_name, v.id AS version_id, v.version_number
+     FROM quotation_templates t
+     JOIN quotation_template_versions v ON v.template_id = t.id
+     WHERE t.is_active = 1
+       AND v.version_number = (SELECT MAX(v2.version_number) FROM quotation_template_versions v2 WHERE v2.template_id = t.id)
+     ORDER BY t.template_name"
+);
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
@@ -44,6 +52,12 @@ unset($_SESSION['company_error']);
                 <div class="col-md-4 mb-3"><label class="form-label">Full name *</label><input class="form-control" name="admin_name" required maxlength="100"></div>
                 <div class="col-md-4 mb-3"><label class="form-label">Login email *</label><input class="form-control" type="email" name="admin_email" required maxlength="100"></div>
                 <div class="col-md-4 mb-3"><label class="form-label">Temporary password *</label><input class="form-control" type="password" name="admin_password" required minlength="10" autocomplete="new-password"></div>
+                <div class="col-md-6 mb-3"><label class="form-label">Assigned quotation template *</label><select class="form-select" name="admin_template_version_id" required>
+                    <option value="">Choose template</option>
+                    <?php while ($template = $templateResult->fetch_assoc()) { ?>
+                        <option value="<?= (int)$template['version_id'] ?>"><?= companyAddEscape($template['template_name']) ?> · v<?= (int)$template['version_number'] ?></option>
+                    <?php } ?>
+                </select><small class="text-muted">This template is assigned to the first user and loads automatically for new quotations.</small></div>
             </div>
             <p class="text-muted">Share the temporary password with the administrator using a secure channel. It is stored only as a password hash.</p>
             <button class="btn btn-primary" type="submit">Create company</button>
