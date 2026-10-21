@@ -657,6 +657,34 @@ foreach (
 
 
 // =====================================================
+// LOAD THE ASSIGNED TEMPLATE VERSION
+// =====================================================
+
+$templateStmt = mysqli_prepare(
+    $conn,
+    "SELECT v.id, v.config_json
+     FROM users u
+     JOIN quotation_template_versions v ON v.id = u.assigned_template_version_id
+     JOIN quotation_templates t ON t.id = v.template_id
+     WHERE u.id = ? AND u.company_id = ? AND u.status = 'Active' AND t.is_active = 1
+     LIMIT 1"
+);
+mysqli_stmt_bind_param($templateStmt, "ii", $userId, $companyId);
+mysqli_stmt_execute($templateStmt);
+$templateRow = mysqli_stmt_get_result($templateStmt);
+$templateRow = $templateRow ? mysqli_fetch_assoc($templateRow) : null;
+mysqli_stmt_close($templateStmt);
+if (!$templateRow) {
+    throw new RuntimeException("No active quotation template is assigned to this user.");
+}
+$templateVersionId = (int)$templateRow['id'];
+$templateSnapshot = (string)$templateRow['config_json'];
+if (!is_array(json_decode($templateSnapshot, true))) {
+    throw new RuntimeException("Assigned quotation template is invalid.");
+}
+
+
+// =====================================================
 // DATABASE TRANSACTION
 // =====================================================
 
@@ -745,6 +773,8 @@ try {
             remarks,
             copied_from_quotation_id,
             company_id,
+            template_version_id,
+            template_config_snapshot,
             created_by
         )
         VALUES
@@ -781,7 +811,7 @@ try {
 
     mysqli_stmt_bind_param(
         $master_stmt,
-        "sissssssssii",
+        "sissssssssiisi",
         $quotation_no,
         $client_id,
         $rfq_no,
@@ -793,6 +823,8 @@ try {
         $status,
         $remarks,
         $companyId,
+        $templateVersionId,
+        $templateSnapshot,
         $created_by
     );
 
