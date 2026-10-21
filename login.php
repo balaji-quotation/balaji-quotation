@@ -350,9 +350,9 @@ body{
 
 
         <img
-            src="/quotation/dist/assets/images/unicornlogodark.png"
+            src="/quotation/dist/assets/images/logo-dark.png"
             class="login-logo"
-            alt="Unicorn Technoflex"
+            alt="Balaji Webtech"
             onerror="
                 this.onerror=null;
                 this.src='/quotation/dist/assets/images/logo.png';
@@ -563,7 +563,7 @@ body{
 
         <div class="login-footer">
 
-            Unicorn Technoflex · Product Tracking ERP
+            Balaji Webtech · Quotation SaaS
 
         </div>
 
