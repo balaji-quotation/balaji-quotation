@@ -239,27 +239,26 @@ try {
     migrationEnsureColumn($conn, 'companies', 'paid_start_date', 'DATE DEFAULT NULL');
     migrationEnsureColumn($conn, 'companies', 'paid_end_date', 'DATE DEFAULT NULL');
 
-    if ($legacyCompanyName !== '') {
-        $stmt = $conn->prepare(
-            "INSERT INTO companies
-                (company_name, slug, billing_address, gstin, mobile, email, status)
-             SELECT company_name, 'legacy-company', company_address, gst_no, phone, email, 'Active'
-             FROM quotation_company_settings
-             WHERE id = 1
-             ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)"
-        );
-        $stmt->execute();
-        $stmt->close();
-    } else {
-        $stmt = $conn->prepare(
-            "INSERT INTO companies (company_name, slug, status)
-             VALUES (?, 'legacy-company', 'Active')
-             ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)"
-        );
-        $stmt->bind_param('s', $migrationCompanyName);
-        $stmt->execute();
-        $stmt->close();
-    }
+    $companyAddress = $legacy['company_address'] ?? null;
+    $companyGst = $legacy['gst_no'] ?? null;
+    $companyPhone = $legacy['phone'] ?? null;
+    $companyEmail = $legacy['email'] ?? null;
+    $stmt = $conn->prepare(
+        "INSERT INTO companies
+            (company_name, slug, billing_address, gstin, mobile, email, status)
+         VALUES (?, 'legacy-company', ?, ?, ?, ?, 'Active')
+         ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(companies.id)"
+    );
+    $stmt->bind_param(
+        'sssss',
+        $migrationCompanyName,
+        $companyAddress,
+        $companyGst,
+        $companyPhone,
+        $companyEmail
+    );
+    $stmt->execute();
+    $stmt->close();
 
     $conn->query(
         "CREATE TABLE IF NOT EXISTS template_change_requests (
