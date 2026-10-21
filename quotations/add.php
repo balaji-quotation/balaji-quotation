@@ -100,7 +100,8 @@ $product_sql = "
         id,
         product_code,
         product_name,
-        part_number
+        part_number,
+        default_rate
     FROM products
     WHERE company_id = $companyId
     ORDER BY product_name ASC
@@ -1706,6 +1707,8 @@ document.addEventListener(
                     value = product.product_code || "";
                 } else if (/^(partnumber|partno|part)$/.test(label)) {
                     value = product.part_number || "";
+                } else if (/^(rate|price|unitrate|unitprice|rateperunit|priceperunit)$/.test(label)) {
+                    value = product.default_rate ?? "";
                 } else if (/description|product|item|material|particular|details/.test(label)) {
                     value = product.product_name || "";
                 }
