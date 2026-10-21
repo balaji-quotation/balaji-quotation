@@ -42,9 +42,8 @@ $email = trim(
     $_POST['email'] ?? ''
 );
 
-$mobile = trim(
-    $_POST['mobile'] ?? ''
-);
+$mobile = trim($_POST['mobile'] ?? '');
+$alternate_mobile = trim($_POST['alternate_mobile'] ?? '');
 
 $address = trim(
     $_POST['address'] ?? ''
@@ -63,8 +62,23 @@ if ($id <= 0) {
     die("Invalid Client ID.");
 }
 
-if ($company_name === '') {
-    die("Company Name is required.");
+if ($company_name === '' || mb_strlen($company_name, 'UTF-8') > 150) {
+    die("Company Name is required and must be 150 characters or fewer.");
+}
+if ($address === '') {
+    die("Complete Address is required.");
+}
+if ($mobile === '' && $alternate_mobile === '') {
+    die("Mobile or Alternate Mobile is required.");
+}
+if (strlen($mobile) > 20 || strlen($alternate_mobile) > 30) {
+    die("Mobile must be 20 characters or fewer and Alternate Mobile 30 characters or fewer.");
+}
+if ($email !== '' && (strlen($email) > 100 || !filter_var($email, FILTER_VALIDATE_EMAIL))) {
+    die("Enter a valid email address of 100 characters or fewer.");
+}
+if (!in_array($status, ['Active', 'Inactive'], true)) {
+    die("Invalid client status.");
 }
 
 if (
@@ -87,6 +101,7 @@ $sql = "
         gstin = ?,
         email = ?,
         mobile = ?,
+        alternate_mobile = ?,
         address = ?,
         status = ?
     WHERE id = ?
@@ -110,12 +125,13 @@ if (!$stmt) {
 
 mysqli_stmt_bind_param(
     $stmt,
-    "sssssssii",
+    "ssssssssii",
     $company_name,
     $contact_person,
     $gstin,
     $email,
     $mobile,
+    $alternate_mobile,
     $address,
     $status,
     $id,
