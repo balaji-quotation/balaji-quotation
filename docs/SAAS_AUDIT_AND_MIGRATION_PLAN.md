@@ -48,7 +48,8 @@ This is a source-level audit of the committed baseline, not a production databas
 - The read-only preflight passed against the local `quotations` database on MySQL 5.7.44 when supplied the owner-confirmed mapping. It printed metadata-only table counts and made no changes.
 - An isolated database clone was made from the local database; all 26 source table counts matched before migration. The migration applied and then applied a second time successfully on that clone.
 - After both runs, all 25 legacy tables with pre-existing data retained their row counts, primary-key sets, and original column contents, including `updated_at`; tenant-owned rows had no null company mapping, and user/quotation template assignments were present.
-- The source `quotations` database has not been migrated. The uploaded SQL export has the same table inventory/count baseline but does not include the company-settings row. A restore-from-export check and application/print regression checks remain before any source-database apply.
+- The local MAMP `quotations` database was migrated on 2026-10-21 after explicit owner approval, using the confirmed Balaji Webtech mapping. An isolated clone of the local database was migrated twice and verified; source-database post-migration checks show legacy row counts unchanged, all tenant mappings populated, and template assignments/snapshots present. The local company profile fields missing from the source remain blank for Super Admin completion.
+- The owner confirmed a backup exists. A restore test of the attached SQL file was not completed; the export has the same table/count baseline but lacks the company-settings row. The source database migration therefore has clone-based preservation evidence, while independent backup-restore and application/print regression checks remain.
 
 ## Implementation sequence
 
