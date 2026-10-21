@@ -667,6 +667,7 @@ mysqli_stmt_close(
 // =====================================================
 // PRINT MODE
 $subtotal = 0.0;
+$rowAmounts = [];
 $totalsCalculable = count($rows) > 0;
 foreach ($rows as $row) {
     $amount = quotationTemplateRowAmount($row, $columns, $calculationConfig);
@@ -674,9 +675,12 @@ foreach ($rows as $row) {
         $totalsCalculable = false;
         break;
     }
+    $amount = quotationTemplateRound($amount, $decimalPlaces, $roundingMode);
+    $rowAmounts[] = $amount;
     $subtotal += $amount;
 }
 if (!is_finite($subtotal)) $totalsCalculable = false;
+if (!$totalsCalculable) $rowAmounts = [];
 $subtotal = $totalsCalculable ? quotationTemplateRound($subtotal, $decimalPlaces, $roundingMode) : 0.0;
 $gstEnabled = !empty($taxConfig['gst_enabled']);
 $gstRate = is_numeric($taxConfig['gst_rate'] ?? null) ? max(0.0, min(100.0, (float)$taxConfig['gst_rate'])) : 0.0;
@@ -686,6 +690,7 @@ $taxAmount = $gstEnabled && $totalsCalculable
 $grandTotal = $totalsCalculable
     ? quotationTemplateRound($subtotal + $taxAmount, $decimalPlaces, $roundingMode)
     : 0.0;
+$showLineAmount = !empty($totalsConfig['show_line_amount']) && $totalsCalculable;
 $showSubtotal = !empty($totalsConfig['show_subtotal']);
 $showTax = !empty($totalsConfig['show_tax'] ?? $totalsConfig['show_total'] ?? false) && $gstEnabled;
 $showGrandTotal = !empty($totalsConfig['show_grand_total']);
@@ -1502,17 +1507,10 @@ th {
 $usable_width =
     94;
 
-$column_width =
-    count(
-        $columns
-    ) > 0
-        ? floor(
-            $usable_width /
-            count(
-                $columns
-            )
-        )
-        : $usable_width;
+$printColumnCount = count($columns) + ($showLineAmount ? 1 : 0);
+$column_width = $printColumnCount > 0
+    ? floor($usable_width / $printColumnCount)
+    : $usable_width;
 
 foreach (
     $columns
@@ -1547,6 +1545,10 @@ foreach (
 
 </th>
 
+<?php } ?>
+
+<?php if ($showLineAmount) { ?>
+<th style="width:<?= $column_width; ?>%;text-align:center;">Amount</th>
 <?php } ?>
 
 </tr>
@@ -1595,6 +1597,10 @@ foreach (
     ); ?>
 </td>
 
+<?php } ?>
+
+<?php if ($showLineAmount) { ?>
+<td style="text-align:right;white-space:nowrap;"><?= htmlspecialchars($currency_symbol) ?> <?= number_format($rowAmounts[$index] ?? 0, $decimalPlaces, '.', ',') ?></td>
 <?php } ?>
 
 </tr>
