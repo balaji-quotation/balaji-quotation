@@ -197,6 +197,7 @@ while ($tableRow = $tableList->fetch_assoc()) {
     echo '  ' . $tableName . ': ' . migrationCount($conn, $tableName) . "\n";
 }
 echo "Planned tenant columns: users, clients, products, quotations, quotation_term_sets, quotation_company_settings, activity_log.\n";
+echo "Planned additive columns: companies.logo_path, products.default_rate.\n";
 echo "No application writes may run concurrently with apply; use a maintenance window and verified restorable backup.\n";
 if (!$apply) {
     echo "DRY RUN ONLY. No schema or data changes were made.\n";
@@ -219,6 +220,7 @@ try {
             city VARCHAR(100) DEFAULT NULL,
             state VARCHAR(100) DEFAULT NULL,
             pincode VARCHAR(20) DEFAULT NULL,
+            logo_path VARCHAR(500) DEFAULT NULL,
             status ENUM('Active','Inactive','Suspended') NOT NULL DEFAULT 'Active',
             subscription_plan ENUM('Business','Premium') DEFAULT NULL,
             trial_start_date DATE DEFAULT NULL,
@@ -238,6 +240,8 @@ try {
     migrationEnsureColumn($conn, 'companies', 'trial_end_date', 'DATE DEFAULT NULL');
     migrationEnsureColumn($conn, 'companies', 'paid_start_date', 'DATE DEFAULT NULL');
     migrationEnsureColumn($conn, 'companies', 'paid_end_date', 'DATE DEFAULT NULL');
+    migrationEnsureColumn($conn, 'companies', 'logo_path', 'VARCHAR(500) DEFAULT NULL');
+    migrationEnsureColumn($conn, 'products', 'default_rate', 'DECIMAL(15,4) DEFAULT NULL');
 
     $companyAddress = $legacy['company_address'] ?? null;
     $companyGst = $legacy['gst_no'] ?? null;
