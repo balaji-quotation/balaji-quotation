@@ -70,6 +70,23 @@ if ($mode === 'custom') {
     if (preg_match('/\\b(rate|price)\\b/i', $formula) && empty($roles['rate'])) templateFail('Add a Rate or Price column for this formula.');
     if (preg_match('/\\bamount\\b/i', $formula) && empty($roles['amount']) && (empty($roles['qty']) || empty($roles['rate']))) templateFail('Add an Amount column or both Qty and Rate columns for this formula.');
 }
+$hasQtyColumn = false;
+$hasRateColumn = false;
+$hasAmountColumn = false;
+foreach ($cleanColumns as $column) {
+    $role = quotationTemplateColumnRole($column);
+    if ($role === 'qty') $hasQtyColumn = true;
+    if ($role === 'rate') $hasRateColumn = true;
+    if ($role === 'amount') $hasAmountColumn = true;
+}
+$amountVisibilityRequested = $gstEnabled
+    || (int)($_POST['show_line_amount'] ?? 0) === 1
+    || (int)($_POST['show_subtotal'] ?? 0) === 1
+    || (int)($_POST['show_tax'] ?? 0) === 1
+    || (int)($_POST['show_grand_total'] ?? 0) === 1;
+if ($mode === 'standard' && $amountVisibilityRequested && !$hasAmountColumn && !($hasQtyColumn && $hasRateColumn)) {
+    templateFail('Standard totals need Qty and Rate columns or an Amount column. Turn off GST and totals if this template has no numeric amount.');
+}
 $config = [
     'columns'=>$cleanColumns,
     'commercial_terms'=>$cleanCommercial,
