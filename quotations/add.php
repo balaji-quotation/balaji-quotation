@@ -19,6 +19,7 @@ if (!isset($_SESSION['user_id'])) {
 
 include("../includes/db.php");
 require_once __DIR__ . '/../includes/permissions.php';
+require_once __DIR__ . '/../includes/quotation_numbering.php';
 erpRequireCompanyUser($conn);
 erpRequire('quotations.add');
 $companyId = erpCurrentCompanyId();
@@ -244,16 +245,12 @@ if ($next_result) {
         );
 }
 
-$suggested_quotation_no =
-    $quotation_prefix .
-    $fy_text .
-    '/' .
-    str_pad(
-        $next_serial,
-        4,
-        '0',
-        STR_PAD_LEFT
-    );
+$suggested_quotation_no = quotationFormatNumber(
+    $quotation_prefix,
+    $fy_text,
+    $year,
+    $next_serial
+);
 
 
 // =====================================================
