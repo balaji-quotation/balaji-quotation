@@ -5,6 +5,7 @@ if (!isset($_SESSION['user_id'])) { header('Location: ../../login.php'); exit; }
 require_once __DIR__ . '/../../includes/permissions.php';
 erpRequire('superadmin.templates');
 require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/quotation_template_runtime.php';
 function templateFail(string $message): never {
     $_SESSION['template_error'] = $message;
     $id = (int)($_POST['template_id'] ?? 0);
@@ -24,7 +25,9 @@ $formula = mb_substr(trim((string)($_POST['calculation_formula'] ?? '')), 0, 500
 $gstRate = filter_var($_POST['gst_rate'] ?? 0, FILTER_VALIDATE_FLOAT);
 $gstEnabled = (int)($_POST['gst_enabled'] ?? 0) === 1;
 $layout = (string)($_POST['print_layout'] ?? '');
-if ($name === '' || !in_array($mode, ['standard','custom'], true) || $gstRate === false || $gstRate < 0 || $gstRate > 100 || !in_array($layout, ['Classic','Compact','Minimal','Modern'], true)) templateFail('Check the template name and calculation, GST, and print settings.');
+$decimalPlaces = filter_var($_POST['decimal_places'] ?? 2, FILTER_VALIDATE_INT);
+$roundingMode = (string)($_POST['rounding_mode'] ?? 'half_up');
+if ($name === '' || !in_array($mode, ['standard','custom'], true) || $gstRate === false || $gstRate < 0 || $gstRate > 100 || !in_array($layout, ['Classic','Compact','Minimal','Modern'], true) || $decimalPlaces === false || $decimalPlaces < 0 || $decimalPlaces > 4 || !in_array($roundingMode, ['half_up','half_even','ceil','floor'], true)) templateFail('Check the template name and calculation, rounding, GST, and print settings.');
 if ($mode === 'custom' && $formula === '') templateFail('Enter a formula when custom calculation is selected.');
 
 $columns = json_decode((string)($_POST['columns_json'] ?? ''), true);
@@ -55,15 +58,28 @@ foreach ($general as $term) {
     if ($term !== '') $cleanGeneral[] = $term;
 }
 if (count($cleanGeneral) > 50 || count($cleanCommercial) > 50) templateFail('A template may contain up to 50 default terms of each type.');
+if ($mode === 'custom') {
+    $sample = quotationTemplateEvaluateFormula($formula, ['qty'=>2.0,'rate'=>3.0,'amount'=>6.0]);
+    if ($sample === null) templateFail('Formula syntax is invalid. Use qty, rate, amount, numbers, + - * /, and parentheses.');
+    $roles = [];
+    foreach ($cleanColumns as $column) {
+        $role = quotationTemplateColumnRole($column);
+        if ($role !== null) $roles[$role] = true;
+    }
+    if (preg_match('/\\b(qty|quantity)\\b/i', $formula) && empty($roles['qty'])) templateFail('Add a Qty or Quantity column for this formula.');
+    if (preg_match('/\\b(rate|price)\\b/i', $formula) && empty($roles['rate'])) templateFail('Add a Rate or Price column for this formula.');
+    if (preg_match('/\\bamount\\b/i', $formula) && empty($roles['amount']) && (empty($roles['qty']) || empty($roles['rate']))) templateFail('Add an Amount column or both Qty and Rate columns for this formula.');
+}
 $config = [
     'columns'=>$cleanColumns,
     'commercial_terms'=>$cleanCommercial,
     'general_terms'=>$cleanGeneral,
     'calculation'=>['mode'=>$mode,'formula'=>$formula],
+    'rounding'=>['decimal_places'=>(int)$decimalPlaces,'mode'=>$roundingMode],
     'tax'=>['gst_enabled'=>$gstEnabled,'gst_rate'=>round((float)$gstRate, 2)],
     'totals'=>[
         'show_subtotal'=>(int)($_POST['show_subtotal'] ?? 0) === 1,
-        'show_total'=>(int)($_POST['show_total'] ?? 0) === 1,
+        'show_tax'=>(int)($_POST['show_tax'] ?? 0) === 1,
         'show_grand_total'=>(int)($_POST['show_grand_total'] ?? 0) === 1
     ],
     'print_layout'=>$layout
