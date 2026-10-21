@@ -17,6 +17,7 @@ $token = (string)($_POST['csrf_token'] ?? '');
 if (empty($_SESSION['csrf_token']) || $token === '' || !hash_equals($_SESSION['csrf_token'], $token)) templateFail('Request expired. Reload and try again.');
 $templateId = filter_var($_POST['template_id'] ?? 0, FILTER_VALIDATE_INT);
 $templateId = $templateId ? (int)$templateId : 0;
+$companyId = filter_var($_POST['company_id'] ?? null, FILTER_VALIDATE_INT);
 $name = mb_substr(trim((string)($_POST['template_name'] ?? '')), 0, 150, 'UTF-8');
 $description = mb_substr(trim((string)($_POST['description'] ?? '')), 0, 2000, 'UTF-8');
 $isActive = (int)($_POST['is_active'] ?? 0) === 1 ? 1 : 0;
@@ -27,7 +28,7 @@ $gstEnabled = (int)($_POST['gst_enabled'] ?? 0) === 1;
 $layout = (string)($_POST['print_layout'] ?? '');
 $decimalPlaces = filter_var($_POST['decimal_places'] ?? 2, FILTER_VALIDATE_INT);
 $roundingMode = (string)($_POST['rounding_mode'] ?? 'half_up');
-if ($name === '' || !in_array($mode, ['standard','custom'], true) || $gstRate === false || $gstRate < 0 || $gstRate > 100 || !in_array($layout, ['Classic','Compact','Minimal','Modern'], true) || $decimalPlaces === false || $decimalPlaces < 0 || $decimalPlaces > 4 || !in_array($roundingMode, ['half_up','half_even','ceil','floor'], true)) templateFail('Check the template name and calculation, rounding, GST, and print settings.');
+if (($templateId === 0 && (!$companyId || $companyId < 1)) || $name === '' || !in_array($mode, ['standard','custom'], true) || $gstRate === false || $gstRate < 0 || $gstRate > 100 || !in_array($layout, ['Classic','Compact','Minimal','Modern'], true) || $decimalPlaces === false || $decimalPlaces < 0 || $decimalPlaces > 4 || !in_array($roundingMode, ['half_up','half_even','ceil','floor'], true)) templateFail('Check the template name and calculation, rounding, GST, and print settings.');
 if ($mode === 'custom' && $formula === '') templateFail('Enter a formula when custom calculation is selected.');
 
 $columns = json_decode((string)($_POST['columns_json'] ?? ''), true);
@@ -115,10 +116,16 @@ try {
         $check->bind_param('i', $templateId); $check->execute(); $exists = $check->get_result()->fetch_assoc(); $check->close();
         if (!$exists) throw new RuntimeException('Template not found.');
     } else {
+        $companyCheck = $conn->prepare('SELECT id FROM companies WHERE id = ? LIMIT 1');
+        $companyCheck->bind_param('i', $companyId);
+        $companyCheck->execute();
+        $companyExists = $companyCheck->get_result()->fetch_assoc();
+        $companyCheck->close();
+        if (!$companyExists) throw new RuntimeException('Company not found.');
         $key = 'tpl-' . bin2hex(random_bytes(12));
-        $stmt = $conn->prepare("INSERT INTO quotation_templates (template_key, template_name, description, is_active, created_by) VALUES (?, ?, NULLIF(?, ''), ?, ?)");
+        $stmt = $conn->prepare("INSERT INTO quotation_templates (company_id, template_key, template_name, description, is_active, created_by) VALUES (?, ?, ?, NULLIF(?, ''), ?, ?)");
         $adminId = (int)$_SESSION['user_id'];
-        $stmt->bind_param('sssii', $key, $name, $description, $isActive, $adminId);
+        $stmt->bind_param('isssii', $companyId, $key, $name, $description, $isActive, $adminId);
         $stmt->execute(); $templateId = (int)$conn->insert_id; $stmt->close();
     }
     $versionQuery = $conn->prepare('SELECT COALESCE(MAX(version_number), 0) + 1 AS next_version FROM quotation_template_versions WHERE template_id = ?');
