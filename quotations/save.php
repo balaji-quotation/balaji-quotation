@@ -319,10 +319,10 @@ $templateStmt = mysqli_prepare(
      FROM users u
      JOIN quotation_template_versions v ON v.id = u.assigned_template_version_id
      JOIN quotation_templates t ON t.id = v.template_id
-     WHERE u.id = ? AND u.company_id = ? AND u.status = 'Active' AND t.is_active = 1
+     WHERE u.id = ? AND u.company_id = ? AND t.company_id = ? AND u.status = 'Active' AND t.is_active = 1
      LIMIT 1"
 );
-mysqli_stmt_bind_param($templateStmt, "ii", $userId, $companyId);
+mysqli_stmt_bind_param($templateStmt, "iii", $userId, $companyId, $companyId);
 mysqli_stmt_execute($templateStmt);
 $templateRow = mysqli_stmt_get_result($templateStmt);
 $templateRow = $templateRow ? mysqli_fetch_assoc($templateRow) : null;
