@@ -357,192 +357,44 @@ mysqli_stmt_close($stmt);
 
 
 // =====================================================
-// DYNAMIC COLUMN DATA
-// =====================================================
+// Preserve the quotation's approved template columns. Ignore posted column metadata.
+$row_data = $_POST['row_data'] ?? [];
+if (!is_array($row_data)) $row_data = [];
 
-$column_labels =
-    $_POST['column_label'] ?? [];
-
-$column_units =
-    $_POST['column_unit'] ?? [];
-
-$column_types =
-    $_POST['column_type'] ?? [];
-
-$column_aligns =
-    $_POST['column_align'] ?? [];
-
-$row_data =
-    $_POST['row_data'] ?? [];
-
-
-if (!is_array($column_labels)) {
-    $column_labels = [];
+$sourceColumnStmt = mysqli_prepare(
+    $conn,
+    "SELECT qc.column_key, qc.column_label, qc.unit_text, qc.data_type, qc.text_align
+     FROM quotation_columns qc
+     INNER JOIN quotations q ON q.id = qc.quotation_id
+     WHERE q.id = ? AND q.company_id = ? AND q.created_by = ? AND qc.is_visible = 1
+     ORDER BY qc.sort_order ASC, qc.id ASC"
+);
+if (!$sourceColumnStmt) {
+    redirectWithError($quotation_id, "Unable to load the quotation template.");
 }
-
-if (!is_array($column_units)) {
-    $column_units = [];
-}
-
-if (!is_array($column_types)) {
-    $column_types = [];
-}
-
-if (!is_array($column_aligns)) {
-    $column_aligns = [];
-}
-
-if (!is_array($row_data)) {
-    $row_data = [];
-}
-
-
-// =====================================================
-// CLEAN COLUMNS
-// =====================================================
-
+mysqli_stmt_bind_param($sourceColumnStmt, "iii", $quotation_id, $companyId, $userId);
+mysqli_stmt_execute($sourceColumnStmt);
+$sourceColumnResult = mysqli_stmt_get_result($sourceColumnStmt);
 $columns = [];
-
-$allowed_types = [
-    'text',
-    'number',
-    'currency',
-    'textarea'
-];
-
-$allowed_aligns = [
-    'left',
-    'center',
-    'right'
-];
-
-$currency_symbols = [
-    'INR' => '₹',
-    'USD' => '$',
-    'EUR' => '€',
-    'GBP' => '£'
-];
-
-$currency_symbol =
-    $currency_symbols[$currency]
-    ?? '₹';
-
-
-foreach (
-    $column_labels
-    as $index => $label
-) {
-
-    $label = trim(
-        (string)$label
-    );
-
-    if ($label === '') {
-        continue;
-    }
-
-    $unit = trim(
-        (string)(
-            $column_units[$index]
-            ?? ''
-        )
-    );
-
-    $type = trim(
-        (string)(
-            $column_types[$index]
-            ?? 'text'
-        )
-    );
-
-    $align = trim(
-        (string)(
-            $column_aligns[$index]
-            ?? 'left'
-        )
-    );
-
-
-    if (
-        !in_array(
-            $type,
-            $allowed_types,
-            true
-        )
-    ) {
-        $type = 'text';
-    }
-
-    if (
-        !in_array(
-            $align,
-            $allowed_aligns,
-            true
-        )
-    ) {
-        $align = 'left';
-    }
-
-
-    // ---------------------------------------------
-    // Currency column:
-    // ₹/KG -> $/KG etc. according to quote currency
-    // ---------------------------------------------
-
-    if ($type === 'currency') {
-
-        $unit = preg_replace(
-            '/^[₹$€£]/u',
-            '',
-            $unit
-        );
-
-        $unit = trim(
-            (string)$unit
-        );
-
-        if ($unit === '') {
-            $unit = '/PCS';
-        }
-
-        if (
-            substr(
-                $unit,
-                0,
-                1
-            ) !== '/'
-        ) {
-            $unit =
-                '/' .
-                $unit;
-        }
-
-        $unit =
-            $currency_symbol .
-            $unit;
-    }
-
-
+while ($sourceColumn = mysqli_fetch_assoc($sourceColumnResult)) {
     $columns[] = [
-        'original_index' => intval($index),
-        'label'          => $label,
-        'unit'           => $unit,
-        'type'           => $type,
-        'align'          => $align
+        'original_index' => count($columns),
+        'column_key' => (string)$sourceColumn['column_key'],
+        'label' => (string)$sourceColumn['column_label'],
+        'unit' => (string)($sourceColumn['unit_text'] ?? ''),
+        'type' => in_array($sourceColumn['data_type'], ['text','number','currency','textarea'], true) ? $sourceColumn['data_type'] : 'text',
+        'align' => in_array($sourceColumn['text_align'], ['left','center','right'], true) ? $sourceColumn['text_align'] : 'left'
     ];
 }
-
-
-if (count($columns) === 0) {
-
-    redirectWithError(
-        $quotation_id,
-        "At least one quotation table column is required."
-    );
+mysqli_stmt_close($sourceColumnStmt);
+if (!$columns) {
+    redirectWithError($quotation_id, "This quotation has no approved template columns.");
 }
 
 
 // =====================================================
+
+
 // CLEAN ROWS
 // =====================================================
 
@@ -903,8 +755,7 @@ try {
             $index + 1;
 
         $column_key =
-            'col_' .
-            $sort_order;
+            $column['column_key'];
 
         $saved_column_keys[] =
             $column_key;
