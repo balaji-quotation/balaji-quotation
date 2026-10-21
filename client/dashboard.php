@@ -32,6 +32,11 @@ include __DIR__ . '/../includes/sidebar.php';
 ?>
 <div class="content-page"><div class="content"><div class="container-fluid">
     <div class="page-title-box"><h4 class="page-title">Company Dashboard</h4><p class="text-muted">Welcome, <?= htmlspecialchars((string)($_SESSION['user_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?></p></div>
+    <?php if (!empty($_SESSION['subscription_read_only'])) { ?>
+        <div class="alert alert-warning" role="status">
+            Subscription access is read-only. You can continue to view and print existing quotations; creating, editing, and revising quotations is disabled until Super Admin activates or renews the plan.
+        </div>
+    <?php } ?>
     <div class="row">
         <div class="col-md-4"><div class="card"><div class="card-body"><h5>Quotations</h5><h2><?= $stats['quotations'] ?></h2><a href="../quotations/index.php">Open quotations</a></div></div></div>
         <div class="col-md-4"><div class="card"><div class="card-body"><h5>Drafts</h5><h2><?= $stats['drafts'] ?></h2></div></div></div>
