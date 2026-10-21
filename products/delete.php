@@ -8,6 +8,10 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 require_once __DIR__ . "/../includes/db.php";
+require_once __DIR__ . '/../includes/permissions.php';
+erpRequireCompanyUser($conn);
+erpRequire('products.delete');
+$companyId = erpCurrentCompanyId();
 
 
 // =====================================================
@@ -65,6 +69,7 @@ $product_stmt = mysqli_prepare(
         product_image
     FROM products
     WHERE id = ?
+      AND company_id = ?
     LIMIT 1
     "
 );
@@ -82,8 +87,9 @@ if (!$product_stmt) {
 
 mysqli_stmt_bind_param(
     $product_stmt,
-    "i",
-    $id
+    "ii",
+    $id,
+    $companyId
 );
 
 mysqli_stmt_execute($product_stmt);
@@ -277,6 +283,7 @@ $delete_stmt =
         "
         DELETE FROM products
         WHERE id = ?
+          AND company_id = ?
         LIMIT 1
         "
     );
@@ -294,8 +301,9 @@ if (!$delete_stmt) {
 
 mysqli_stmt_bind_param(
     $delete_stmt,
-    "i",
-    $id
+    "ii",
+    $id,
+    $companyId
 );
 
 if (!mysqli_stmt_execute($delete_stmt)) {
