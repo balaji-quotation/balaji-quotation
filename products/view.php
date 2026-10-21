@@ -8,6 +8,10 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 include("../includes/db.php");
+require_once __DIR__ . '/../includes/permissions.php';
+erpRequireCompanyUser($conn);
+erpRequire('products.view');
+$companyId = erpCurrentCompanyId();
 include("../includes/header.php");
 include("../includes/sidebar.php");
 
@@ -44,6 +48,7 @@ $sql = "
     SELECT *
     FROM products
     WHERE id = $id
+      AND company_id = $companyId
     LIMIT 1
 ";
 
