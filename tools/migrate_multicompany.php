@@ -104,6 +104,32 @@ function migrationEnsureColumn(mysqli $db, string $table, string $column, string
     }
 }
 
+function migrationIndexExists(mysqli $db, string $table, string $index): bool
+{
+    $stmt = $db->prepare(
+        'SELECT 1 FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?'
+    );
+    $stmt->bind_param('ss', $table, $index);
+    $stmt->execute();
+    $stmt->store_result();
+    $exists = $stmt->num_rows > 0;
+    $stmt->close();
+    return $exists;
+}
+
+function migrationForeignKeyExists(mysqli $db, string $table, string $constraint): bool
+{
+    $stmt = $db->prepare(
+        'SELECT 1 FROM information_schema.table_constraints WHERE table_schema = DATABASE() AND table_name = ? AND constraint_name = ? AND constraint_type = \'FOREIGN KEY\''
+    );
+    $stmt->bind_param('ss', $table, $constraint);
+    $stmt->execute();
+    $stmt->store_result();
+    $exists = $stmt->num_rows > 0;
+    $stmt->close();
+    return $exists;
+}
+
 function migrationAddTenantColumn(mysqli $db, string $table): void
 {
     if (!migrationColumnExists($db, $table, 'company_id')) {
@@ -196,7 +222,8 @@ while ($tableRow = $tableList->fetch_assoc()) {
     }
     echo '  ' . $tableName . ': ' . migrationCount($conn, $tableName) . "\n";
 }
-echo "Planned tenant columns: users, clients, products, quotations, quotation_term_sets, quotation_company_settings, activity_log.\n";
+echo "Planned tenant columns: users, clients, products, quotations, quotation_term_sets, quotation_company_settings, activity_log, quotation_templates.\n";
+echo "Existing quotation templates map to the initial company; new templates are company-scoped.\n";
 echo "Planned additive columns: companies.logo_path, products.default_rate.\n";
 echo "No application writes may run concurrently with apply; use a maintenance window and verified restorable backup.\n";
 if (!$apply) {
@@ -293,6 +320,7 @@ try {
     $conn->query(
         "CREATE TABLE IF NOT EXISTS quotation_templates (
             id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            company_id INT UNSIGNED DEFAULT NULL,
             template_key VARCHAR(100) NOT NULL,
             template_name VARCHAR(150) NOT NULL,
             description TEXT DEFAULT NULL,
@@ -301,7 +329,7 @@ try {
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
-            UNIQUE KEY uq_quotation_templates_key (template_key),
+            UNIQUE KEY uq_quotation_templates_company_key (company_id, template_key),
             KEY idx_quotation_templates_active (is_active)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
@@ -345,6 +373,28 @@ try {
         throw new RuntimeException('Existing legacy-company slug belongs to a different company name; refusing to remap it.');
     }
 
+    migrationEnsureColumn($conn, 'quotation_templates', 'company_id', 'INT UNSIGNED DEFAULT NULL');
+    $templateBackfill = $conn->prepare('UPDATE quotation_templates SET company_id = ? WHERE company_id IS NULL');
+    $templateBackfill->bind_param('i', $legacyCompanyId);
+    $templateBackfill->execute();
+    $templateBackfill->close();
+    $unownedTemplates = (int)($conn->query('SELECT COUNT(*) AS n FROM quotation_templates WHERE company_id IS NULL')->fetch_assoc()['n'] ?? 0);
+    if ($unownedTemplates !== 0) {
+        throw new RuntimeException('Template company backfill is incomplete.');
+    }
+    $conn->query('ALTER TABLE quotation_templates MODIFY company_id INT UNSIGNED NOT NULL');
+    if (migrationIndexExists($conn, 'quotation_templates', 'uq_quotation_templates_key')) {
+        $conn->query('ALTER TABLE quotation_templates DROP INDEX uq_quotation_templates_key');
+    }
+    if (!migrationIndexExists($conn, 'quotation_templates', 'uq_quotation_templates_company_key')) {
+        $conn->query('ALTER TABLE quotation_templates ADD UNIQUE KEY uq_quotation_templates_company_key (company_id, template_key)');
+    }
+    if (!migrationForeignKeyExists($conn, 'quotation_templates', 'fk_quotation_templates_company')) {
+        $conn->query(
+            'ALTER TABLE quotation_templates ADD CONSTRAINT fk_quotation_templates_company FOREIGN KEY (company_id) REFERENCES companies (id) ON DELETE RESTRICT'
+        );
+    }
+
     $defaultConfig = json_encode([
         'columns' => [
             ['label' => 'Part No. / Drawing No.', 'unit' => '', 'type' => 'text', 'align' => 'left'],
@@ -381,10 +431,10 @@ try {
     $templateName = 'Standard Quotation';
     $templateDescription = 'Legacy quotation format preserved as the initial version.';
     $templateStmt = $conn->prepare(
-        'INSERT INTO quotation_templates (template_key, template_name, description, is_active)
-         VALUES (?, ?, ?, 1) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)'
+        'INSERT INTO quotation_templates (company_id, template_key, template_name, description, is_active)
+         VALUES (?, ?, ?, ?, 1) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)'
     );
-    $templateStmt->bind_param('sss', $templateKey, $templateName, $templateDescription);
+    $templateStmt->bind_param('isss', $legacyCompanyId, $templateKey, $templateName, $templateDescription);
     $templateStmt->execute();
     $legacyTemplateId = (int)$conn->insert_id;
     $templateStmt->close();
