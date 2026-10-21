@@ -9,6 +9,7 @@ erpRequire('companies.edit');
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/quotation_numbering.php';
 require_once __DIR__ . '/../../includes/company_settings_sync.php';
+require_once __DIR__ . '/../../includes/company_logo_upload.php';
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: index.php');
     exit;
@@ -50,6 +51,26 @@ $state = mb_substr($state, 0, 100, 'UTF-8');
 $pincode = mb_substr($pincode, 0, 20, 'UTF-8');
 $quotationNumberFormat = mb_substr($quotationNumberFormat, 0, 100, 'UTF-8');
 
+$existingCompany = $conn->prepare('SELECT logo_path FROM companies WHERE id = ? LIMIT 1');
+$existingCompany->bind_param('i', $id);
+$existingCompany->execute();
+$existingCompanyRow = $existingCompany->get_result()->fetch_assoc();
+$existingCompany->close();
+if (!$existingCompanyRow) {
+    $_SESSION['company_error'] = 'Company not found.';
+    header('Location: index.php');
+    exit;
+}
+$oldLogoPath = (string)($existingCompanyRow['logo_path'] ?? '');
+try {
+    $newLogoPath = storeCompanyLogoUpload($_FILES['company_logo'] ?? []);
+} catch (Throwable $error) {
+    $_SESSION['company_error'] = $error->getMessage();
+    header('Location: edit.php?id=' . (int)$id);
+    exit;
+}
+$logoPath = $newLogoPath ?? $oldLogoPath;
+
 try {
     $conn->begin_transaction();
 $stmt = $conn->prepare(
@@ -57,13 +78,13 @@ $stmt = $conn->prepare(
      SET company_name = ?, contact_person = NULLIF(?, ''), email = NULLIF(?, ''),
          mobile = NULLIF(?, ''), alternate_mobile = NULLIF(?, ''), gstin = NULLIF(?, ''),
          billing_address = NULLIF(?, ''), city = NULLIF(?, ''), state = NULLIF(?, ''),
-         pincode = NULLIF(?, ''), status = ?
+         pincode = NULLIF(?, ''), logo_path = NULLIF(?, ''), status = ?
      WHERE id = ? LIMIT 1"
 );
 $stmt->bind_param(
-    'sssssssssssi',
+    'ssssssssssssi',
     $name, $contact, $email, $mobile, $alternateMobile, $gstin,
-    $address, $city, $state, $pincode, $status, $id
+    $address, $city, $state, $pincode, $logoPath, $status, $id
 );
 $stmt->execute();
 $stmt->close();
@@ -85,10 +106,14 @@ $stmt->close();
     $conn->commit();
 } catch (Throwable $error) {
     $conn->rollback();
+    deleteCompanyLogo($newLogoPath);
     error_log('Company update failed: ' . $error->getMessage());
     $_SESSION['company_error'] = 'The company could not be updated. Please review the details and retry.';
     header('Location: edit.php?id=' . (int)$id);
     exit;
+}
+if ($newLogoPath !== null && $newLogoPath !== $oldLogoPath) {
+    deleteCompanyLogo($oldLogoPath);
 }
 $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 header('Location: index.php?updated=1');
