@@ -215,7 +215,9 @@ function printCurrencyUnit(
 function formatQuotationValue(
     $value,
     $column,
-    $currency_symbol
+    $currency_symbol,
+    $decimal_places = 2,
+    $rounding_mode = 'half_up'
 ) {
     $value = trim((string)$value);
 
@@ -261,8 +263,8 @@ function formatQuotationValue(
             $currency_symbol .
             ' ' .
             number_format(
-                (float)$clean_numeric,
-                2,
+                quotationTemplateRound((float)$clean_numeric, (int)$decimal_places, (string)$rounding_mode),
+                (int)$decimal_places,
                 '.',
                 ','
             );
@@ -284,8 +286,8 @@ function formatQuotationValue(
         is_numeric($clean_numeric)
     ) {
         return number_format(
-            (float)$clean_numeric,
-            2,
+            quotationTemplateRound((float)$clean_numeric, (int)$decimal_places, (string)$rounding_mode),
+            (int)$decimal_places,
             '.',
             ','
         );
@@ -1585,7 +1587,9 @@ foreach (
             formatQuotationValue(
                 $value,
                 $column,
-                $currency_symbol
+                $currency_symbol,
+                $decimalPlaces,
+                $roundingMode
             )
         )
     ); ?>
