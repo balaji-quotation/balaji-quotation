@@ -9,6 +9,7 @@ if (!isset($_SESSION['user_id'])) {
 
 include("../includes/db.php");
 require_once __DIR__ . '/../includes/permissions.php';
+require_once __DIR__ . '/../includes/quotation_template_runtime.php';
 erpRequireCompanyUser($conn);
 erpRequire('quotations.view');
 $companyId = erpCurrentCompanyId();
@@ -150,6 +151,20 @@ mysqli_stmt_close(
 if (!$quotation) {
     die("Quotation not found.");
 }
+
+$templateConfig = json_decode((string)($quotation['template_config_snapshot'] ?? ''), true);
+if (!is_array($templateConfig)) $templateConfig = [];
+$roundingConfig = is_array($templateConfig['rounding'] ?? null) ? $templateConfig['rounding'] : [];
+$decimalPlaces = filter_var($roundingConfig['decimal_places'] ?? 2, FILTER_VALIDATE_INT);
+$decimalPlaces = $decimalPlaces === false ? 2 : max(0, min(4, (int)$decimalPlaces));
+$roundingMode = (string)($roundingConfig['mode'] ?? 'half_up');
+if (!in_array($roundingMode, ['half_up','half_even','ceil','floor'], true)) $roundingMode = 'half_up';
+$calculationConfig = is_array($templateConfig['calculation'] ?? null) ? $templateConfig['calculation'] : ['mode'=>'standard','formula'=>''];
+$taxConfig = is_array($templateConfig['tax'] ?? null) ? $templateConfig['tax'] : ['gst_enabled'=>false,'gst_rate'=>0];
+$totalsConfig = is_array($templateConfig['totals'] ?? null) ? $templateConfig['totals'] : [];
+$printLayout = (string)($templateConfig['print_layout'] ?? 'Classic');
+if (!in_array($printLayout, ['Classic','Compact','Minimal','Modern'], true)) $printLayout = 'Classic';
+
 
 
 // =====================================================
@@ -649,6 +664,31 @@ mysqli_stmt_close(
 
 // =====================================================
 // PRINT MODE
+$subtotal = 0.0;
+$totalsCalculable = count($rows) > 0;
+foreach ($rows as $row) {
+    $amount = quotationTemplateRowAmount($row, $columns, $calculationConfig);
+    if ($amount === null) {
+        $totalsCalculable = false;
+        break;
+    }
+    $subtotal += $amount;
+}
+if (!is_finite($subtotal)) $totalsCalculable = false;
+$subtotal = $totalsCalculable ? quotationTemplateRound($subtotal, $decimalPlaces, $roundingMode) : 0.0;
+$gstEnabled = !empty($taxConfig['gst_enabled']);
+$gstRate = is_numeric($taxConfig['gst_rate'] ?? null) ? max(0.0, min(100.0, (float)$taxConfig['gst_rate'])) : 0.0;
+$taxAmount = $gstEnabled && $totalsCalculable
+    ? quotationTemplateRound($subtotal * $gstRate / 100, $decimalPlaces, $roundingMode)
+    : 0.0;
+$grandTotal = $totalsCalculable
+    ? quotationTemplateRound($subtotal + $taxAmount, $decimalPlaces, $roundingMode)
+    : 0.0;
+$showSubtotal = !empty($totalsConfig['show_subtotal']);
+$showTax = !empty($totalsConfig['show_tax'] ?? $totalsConfig['show_total'] ?? false) && $gstEnabled;
+$showGrandTotal = !empty($totalsConfig['show_grand_total']);
+$showTotals = $totalsCalculable && ($showSubtotal || $showTax || $showGrandTotal);
+
 // Wide table => landscape
 // =====================================================
 
@@ -758,6 +798,54 @@ body {
     gap: 4mm;
     align-items: center;
 }
+
+/* Ready-made template print presets */
+.layout-compact .main-quote-table th,
+.layout-compact .main-quote-table td,
+.layout-compact .commercial-table th,
+.layout-compact .commercial-table td {
+    padding: 3px 4px;
+    font-size: 9px;
+}
+.layout-minimal .main-quote-table th,
+.layout-minimal .commercial-table th {
+    background: #fff !important;
+    color: #182536 !important;
+    border-bottom: 2px solid #233f6b;
+}
+.layout-minimal .section-title {
+    border-bottom-width: 1px;
+}
+.layout-modern .main-quote-table th,
+.layout-modern .commercial-table th {
+    background: #0f766e !important;
+    border-color: #0f766e;
+}
+.layout-modern .section-title {
+    color: #0f766e;
+    border-color: #0f766e;
+}
+.total-summary {
+    width: 100%;
+    max-width: 90mm;
+    margin: 8px 0 0 auto;
+    border-collapse: collapse;
+    break-inside: avoid;
+}
+.total-summary td {
+    padding: 5px 7px;
+    border: 1px solid #c7ced7;
+}
+.total-summary td:last-child {
+    text-align: right;
+    white-space: nowrap;
+}
+.total-summary .grand-total td {
+    font-weight: 800;
+    border-top: 2px solid #233f6b;
+}
+
+/* Ready-made template print presets */
 
 .company-left {
     display: block;
@@ -1104,7 +1192,7 @@ th {
 </div>
 
 
-<div class="quotation-sheet">
+<div class="quotation-sheet layout-<?= strtolower($printLayout); ?>">
 
 
 <!-- =====================================================
@@ -1409,24 +1497,6 @@ th {
 
 <?php
 
-$forced_headers = [
-    'Part No. / Drawing No.',
-    'Description',
-    'Material / Grade',
-    'Qty / EAU',
-    'Rate'
-];
-
-$forced_units = [
-    '',
-    '',
-    '',
-    '',
-    $currency_symbol . '/KG'
-];
-
-$use_forced_headers = count($columns) === 5;
-
 $usable_width =
     94;
 
@@ -1457,18 +1527,12 @@ foreach (
 >
 
     <?php
-        $display_label =
-            $use_forced_headers
-                ? $forced_headers[array_search($column, $columns, true)]
-                : $column['column_label'];
+        $display_label = $column['column_label'] ?? '';
 
-        $display_unit =
-            $use_forced_headers
-                ? $forced_units[array_search($column, $columns, true)]
-                : printCurrencyUnit(
-                    $column['unit_text'] ?? '',
-                    $currency_symbol
-                );
+        $display_unit = printCurrencyUnit(
+            $column['unit_text'] ?? '',
+            $currency_symbol
+        );
     ?>
 
     <?= htmlspecialchars($display_label); ?>
@@ -1551,6 +1615,16 @@ foreach (
 </tbody>
 
 </table>
+
+<?php if ($showTotals) { ?>
+<table class="total-summary" aria-label="Quotation totals">
+    <tbody>
+        <?php if ($showSubtotal) { ?><tr><td>Subtotal</td><td><?= htmlspecialchars($currency_symbol) ?> <?= number_format($subtotal, $decimalPlaces, '.', ',') ?></td></tr><?php } ?>
+        <?php if ($showTax) { ?><tr><td>GST (<?= number_format($gstRate, 2) ?>%)</td><td><?= htmlspecialchars($currency_symbol) ?> <?= number_format($taxAmount, $decimalPlaces, '.', ',') ?></td></tr><?php } ?>
+        <?php if ($showGrandTotal) { ?><tr class="grand-total"><td>Grand Total</td><td><?= htmlspecialchars($currency_symbol) ?> <?= number_format($grandTotal, $decimalPlaces, '.', ',') ?></td></tr><?php } ?>
+    </tbody>
+</table>
+<?php } ?>
 
 
 <!-- =====================================================
