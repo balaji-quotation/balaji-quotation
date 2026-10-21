@@ -351,7 +351,6 @@ try {
     );
 
     migrationEnsureColumn($conn, 'template_change_requests', 'applied_template_version_id', 'INT UNSIGNED DEFAULT NULL');
-    migrationEnsureColumn($conn, 'template_change_requests', 'applied_template_version_id', 'INT UNSIGNED DEFAULT NULL');
     if (!migrationIndexExists($conn, 'template_change_requests', 'idx_template_requests_applied_version')) {
         $conn->query('ALTER TABLE template_change_requests ADD INDEX idx_template_requests_applied_version (applied_template_version_id)');
     }
