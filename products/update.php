@@ -310,6 +310,7 @@ $duplicate_stmt =
         FROM products
         WHERE product_code = ?
         AND id != ?
+        AND company_id = ?
         LIMIT 1
         "
     );
@@ -334,9 +335,10 @@ if (!$duplicate_stmt) {
 
 mysqli_stmt_bind_param(
     $duplicate_stmt,
-    "si",
+    "sii",
     $product_code,
-    $id
+    $id,
+    $companyId
 );
 
 
