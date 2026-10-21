@@ -26,6 +26,10 @@ if (empty($_SESSION['csrf_token'])) {
 // =====================================================
 
 include("../includes/db.php");
+require_once __DIR__ . '/../includes/permissions.php';
+erpRequireCompanyUser($conn);
+erpRequire('products.view');
+$companyId = erpCurrentCompanyId();
 include("../includes/header.php");
 include("../includes/sidebar.php");
 
@@ -56,7 +60,7 @@ $sql = "
     SELECT
         p.*
     FROM products p
-    WHERE 1 = 1
+    WHERE p.company_id = $companyId
 ";
 
 
