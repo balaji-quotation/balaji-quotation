@@ -20,7 +20,7 @@ function adminAddEscape($v): string { return htmlspecialchars((string)($v ?? '')
 $error = $_SESSION['admin_user_error'] ?? ''; unset($_SESSION['admin_user_error']);
 ?>
 <div class="content-page"><div class="content"><div class="container-fluid">
-    <div class="page-title-box"><h4 class="page-title">Create Company User</h4><p class="text-muted">Each user receives one quotation template. Active user limits are enforced by plan.</p></div>
+    <div class="page-title-box d-flex justify-content-between align-items-center flex-wrap gap-2"><div><h4 class="page-title">Create Company User</h4><p class="text-muted mb-0">Create the client-specific quotation template first, then assign it here. The user sees only the fields in the assigned template.</p></div><a class="btn btn-outline-primary" href="../templates/index.php">Configure Client Quotation Fields</a></div>
     <?php if ($error !== '') { ?><div class="alert alert-danger"><?= adminAddEscape($error) ?></div><?php } ?>
     <form method="post" action="save.php" autocomplete="off"><input type="hidden" name="csrf_token" value="<?= adminAddEscape($_SESSION['csrf_token']) ?>">
         <div class="card"><div class="card-body"><div class="row">
