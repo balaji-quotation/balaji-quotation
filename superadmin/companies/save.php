@@ -139,8 +139,9 @@ try {
         "INSERT INTO quotation_templates (company_id, template_key, template_name, description, is_active, created_by)
          VALUES (?, ?, ?, NULLIF(?, ''), 1, ?)"
     );
+    $templateName = (string)$sourceTemplate['template_name'];
     $templateDescription = (string)($sourceTemplate['description'] ?? '');
-    $templateInsert->bind_param('isssi', $companyId, $templateKey, $sourceTemplate['template_name'], $templateDescription, $createdBy);
+    $templateInsert->bind_param('isssi', $companyId, $templateKey, $templateName, $templateDescription, $createdBy);
     $templateInsert->execute();
     $companyTemplateId = (int)$conn->insert_id;
     $templateInsert->close();
@@ -148,7 +149,8 @@ try {
     $versionInsert = $conn->prepare(
         'INSERT INTO quotation_template_versions (template_id, version_number, config_json, created_by) VALUES (?, 1, ?, ?)'
     );
-    $versionInsert->bind_param('isi', $companyTemplateId, $sourceTemplate['config_json'], $createdBy);
+    $templateConfigJson = (string)$sourceTemplate['config_json'];
+    $versionInsert->bind_param('isi', $companyTemplateId, $templateConfigJson, $createdBy);
     $versionInsert->execute();
     $companyTemplateVersionId = (int)$conn->insert_id;
     $versionInsert->close();
