@@ -1692,6 +1692,7 @@ document.addEventListener(
 
             const existingValues = [];
             const existingProductIds = [];
+            const existingSaveToProduct = [];
 
             quotationBody
                 .querySelectorAll(
@@ -1722,6 +1723,8 @@ document.addEventListener(
                         );
                         const productPicker = row.querySelector(".product-master-picker");
                         existingProductIds.push(productPicker ? productPicker.value : "");
+                        const saveProductCheckbox = row.querySelector(".save-to-product-checkbox");
+                        existingSaveToProduct.push(saveProductCheckbox && saveProductCheckbox.checked ? "1" : "");
                     }
                 );
 
@@ -1849,10 +1852,29 @@ document.addEventListener(
                 });
 
                 productPicker.value = existingProductIds[rowIndex] || "";
+
+                const saveProductLabel = document.createElement("label");
+                saveProductLabel.className = "small text-muted d-flex align-items-center gap-1 mt-1";
+                const saveProductCheckbox = document.createElement("input");
+                saveProductCheckbox.type = "checkbox";
+                saveProductCheckbox.name = `save_to_product[${rowIndex}]`;
+                saveProductCheckbox.value = "1";
+                saveProductCheckbox.className = "form-check-input mt-0 save-to-product-checkbox";
+                saveProductCheckbox.checked = existingSaveToProduct[rowIndex] === "1";
+                saveProductLabel.appendChild(saveProductCheckbox);
+                const saveProductText = document.createElement("span");
+                saveProductText.textContent = "Save manual item to Product Master";
+                saveProductLabel.appendChild(saveProductText);
+
                 productPicker.addEventListener("change", function () {
                     if (this.value !== "") applyCatalogProduct(tr, this.value);
+                    saveProductCheckbox.disabled = this.value !== "";
+                    if (saveProductCheckbox.disabled) saveProductCheckbox.checked = false;
                 });
+                saveProductCheckbox.disabled = productPicker.value !== "";
+                if (saveProductCheckbox.disabled) saveProductCheckbox.checked = false;
                 productTd.appendChild(productPicker);
+                productTd.appendChild(saveProductLabel);
                 tr.appendChild(productTd);
 
                 const actionTd =
