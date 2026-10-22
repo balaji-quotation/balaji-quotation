@@ -88,6 +88,8 @@ if (!$quotation) {
     die("Quotation not found.");
 }
 
+$canEditQuotation = (int)($quotation['created_by'] ?? 0) === (int)($_SESSION['user_id'] ?? 0);
+
 
 // =====================================================
 // DYNAMIC COLUMNS
@@ -612,6 +614,7 @@ function quoteViewStatusBadge($status)
             ← List
         </a>
 
+        <?php if ($canEditQuotation && empty($_SESSION['subscription_read_only'])) { ?>
         <a
             href="edit.php?id=<?= intval(
                 $quotation_id
@@ -631,6 +634,7 @@ function quoteViewStatusBadge($status)
             <i class="mdi mdi-file-document-edit-outline me-1"></i>
             Revise
         </a>
+        <?php } ?>
 
         <a
             href="print.php?id=<?= intval(
