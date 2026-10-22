@@ -1206,7 +1206,7 @@ document.addEventListener(
                 column.unit = symbol + unit;
             });
 
-            renderColumnConfig();
+            refreshQuotationTable();
         }
 
 
@@ -1281,18 +1281,13 @@ document.addEventListener(
 
 
         // =================================================
-        // RENDER COLUMN CONFIG
-        // =================================================
-
-        function renderColumnConfig() {
+        // Refresh the item table after currency changes.
+        function refreshQuotationTable() {
             renderQuotationTable();
         }
 
 
         // =================================================
-                // COLUMN CONFIG EVENTS
-        // =================================================
-
         // RENDER QUOTATION HEADER
         // =================================================
 
@@ -2131,7 +2126,7 @@ document.addEventListener(
         // INITIAL RENDER
         // =================================================
 
-        renderColumnConfig();
+        refreshQuotationTable();
 
         renderCommercialTerms(
             defaultCommercial
