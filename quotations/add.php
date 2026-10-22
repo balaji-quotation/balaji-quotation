@@ -187,15 +187,9 @@ if (
 // User can edit it before saving.
 // =====================================================
 
-$year =
-    intval(
-        date('Y')
-    );
-
-$month =
-    intval(
-        date('n')
-    );
+$quotationNow = new DateTimeImmutable('now', new DateTimeZone('Asia/Kolkata'));
+$year = (int)$quotationNow->format('Y');
+$month = (int)$quotationNow->format('n');
 
 if ($month >= 4) {
     $fy_start = $year;
@@ -213,38 +207,13 @@ $fy_text =
         -2
     );
 
-$next_serial = 1;
-
-$next_sql = "
-    SELECT
-        COALESCE(
-            MAX(id),
-            0
-        ) + 1 AS next_id
-    FROM quotations
-    WHERE company_id = $companyId
-";
-
-$next_result =
-    mysqli_query(
-        $conn,
-        $next_sql
-    );
-
-if ($next_result) {
-
-    $next_row =
-        mysqli_fetch_assoc(
-            $next_result
-        );
-
-    $next_serial =
-        intval(
-            $next_row[
-                'next_id'
-            ] ?? 1
-        );
-}
+$next_serial = quotationNextSequence(
+    $conn,
+    $companyId,
+    $quotation_prefix,
+    $fy_text,
+    $year
+);
 
 $suggested_quotation_no = quotationFormatNumber(
     $quotation_prefix,
