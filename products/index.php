@@ -11,7 +11,7 @@ $companyId = erpCurrentCompanyId();
 $ready = productMasterSchemaReady($conn);
 $fields = $ready ? productMasterFieldDefinitions($conn) : [];
 $search = trim((string)($_GET['search'] ?? ''));
-$stmt = $conn->prepare('SELECT id, product_code, product_name, default_rate' . ($ready ? ', description, custom_fields_json' : '') . ' FROM products WHERE company_id = ? AND (? = "" OR product_name LIKE CONCAT("%", ?, "%") OR product_code LIKE CONCAT("%", ?, "%")) ORDER BY id DESC');
+$stmt = $conn->prepare('SELECT id, product_code, product_name, default_rate' . ($ready ? ', description, custom_fields_json' : '') . " FROM products WHERE company_id = ? AND (? = '' OR product_name LIKE CONCAT('%', ?, '%') OR product_code LIKE CONCAT('%', ?, '%')) ORDER BY id DESC");
 $stmt->bind_param('isss', $companyId, $search, $search, $search);
 $stmt->execute();
 $result = $stmt->get_result();
