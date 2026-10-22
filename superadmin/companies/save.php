@@ -62,15 +62,22 @@ if (strlen($adminPassword) < 12) {
 }
 
 $templateCheck = $conn->prepare(
-    "SELECT v.id FROM quotation_template_versions v
+    "SELECT v.config_json, t.template_name, t.description
+     FROM quotation_template_versions v
      JOIN quotation_templates t ON t.id = v.template_id
-     WHERE v.id = ? AND t.is_active = 1 LIMIT 1"
+     WHERE v.id = ? AND t.is_active = 1
+       AND v.version_number = (
+           SELECT MAX(v2.version_number)
+           FROM quotation_template_versions v2
+           WHERE v2.template_id = t.id
+       )
+     LIMIT 1"
 );
 $templateCheck->bind_param('i', $adminTemplateVersionId);
 $templateCheck->execute();
-$templateExists = $templateCheck->get_result()->fetch_assoc();
+$sourceTemplate = $templateCheck->get_result()->fetch_assoc();
 $templateCheck->close();
-if (!$templateExists) companySaveFail('Choose an active quotation template version.');
+if (!$sourceTemplate) companySaveFail('Choose the latest version of an active quotation template.');
 
 $check = $conn->prepare('SELECT id FROM users WHERE LOWER(email) = ? LIMIT 1');
 $check->bind_param('s', $adminEmail);
@@ -125,11 +132,32 @@ try {
         $quotationNumberFormat
     );
 
+    // Copy the selected approved template into the new company so template assignments remain tenant-scoped.
+    $templateKey = 'tpl-' . bin2hex(random_bytes(12));
+    $createdBy = (int)$_SESSION['user_id'];
+    $templateInsert = $conn->prepare(
+        "INSERT INTO quotation_templates (company_id, template_key, template_name, description, is_active, created_by)
+         VALUES (?, ?, ?, NULLIF(?, ''), 1, ?)"
+    );
+    $templateDescription = (string)($sourceTemplate['description'] ?? '');
+    $templateInsert->bind_param('isssi', $companyId, $templateKey, $sourceTemplate['template_name'], $templateDescription, $createdBy);
+    $templateInsert->execute();
+    $companyTemplateId = (int)$conn->insert_id;
+    $templateInsert->close();
+
+    $versionInsert = $conn->prepare(
+        'INSERT INTO quotation_template_versions (template_id, version_number, config_json, created_by) VALUES (?, 1, ?, ?)'
+    );
+    $versionInsert->bind_param('isi', $companyTemplateId, $sourceTemplate['config_json'], $createdBy);
+    $versionInsert->execute();
+    $companyTemplateVersionId = (int)$conn->insert_id;
+    $versionInsert->close();
+
     $userInsert = $conn->prepare(
         "INSERT INTO users (name, email, password, role, status, company_id, assigned_template_version_id)
          VALUES (?, ?, ?, 'Administrator', 'Active', ?, ?)"
     );
-    $userInsert->bind_param('sssii', $adminName, $adminEmail, $hash, $companyId, $adminTemplateVersionId);
+    $userInsert->bind_param('sssii', $adminName, $adminEmail, $hash, $companyId, $companyTemplateVersionId);
     $userInsert->execute();
     $userInsert->close();
     $conn->commit();
