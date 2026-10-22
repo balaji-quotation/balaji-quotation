@@ -9,6 +9,7 @@ if (!isset($_SESSION['user_id'])) {
 
 include("../includes/db.php");
 require_once __DIR__ . '/../includes/permissions.php';
+require_once __DIR__ . '/../includes/product_master.php';
 erpRequireCompanyUser($conn);
 erpRequire('quotations.add');
 $companyId = erpCurrentCompanyId();
@@ -495,6 +496,7 @@ foreach (
 
 
     $catalogName = '';
+    $catalogDescription = '';
     $catalogRate = '';
     $catalogPartNumber = '';
     if ($saveToProduct) {
@@ -524,6 +526,9 @@ foreach (
                 $catalogName = $value;
                 $bestNamePriority = $nameCandidates[$labelKey];
             }
+            if ($catalogDescription === '' && in_array($labelKey, ['description', 'productdescription', 'itemdescription', 'details'], true)) {
+                $catalogDescription = $value;
+            }
             if ($catalogRate === '' && in_array($labelKey, ['rate', 'price', 'unitrate', 'unitprice', 'rateperunit', 'priceperunit'], true)) {
                 $catalogRate = $value;
             }
@@ -535,6 +540,9 @@ foreach (
         if ($catalogName === '') {
             $productCheckStmt->close();
             quoteFail('Add a value in the Product Name or Description column before saving this item to Product Master.');
+        }
+        if ($catalogDescription === '') {
+            $catalogDescription = $catalogName;
         }
         if ($catalogRate !== '' && (!is_numeric($catalogRate) || !is_finite((float)$catalogRate) || (float)$catalogRate < 0)) {
             $productCheckStmt->close();
@@ -573,6 +581,8 @@ foreach (
             $saveToProduct,
         'catalog_name' =>
             $catalogName,
+        'catalog_description' =>
+            $catalogDescription,
         'catalog_rate' =>
             $catalogRate,
         'catalog_part_number' =>
@@ -1041,12 +1051,15 @@ try {
     $productInsertStmt = null;
     foreach ($rows as $row) {
         if (!empty($row['save_to_product'])) {
-            $productInsertStmt = mysqli_prepare(
-                $conn,
-                "INSERT INTO products
-                 (company_id, product_code, product_name, default_rate, part_number, drawing_number, revision_no, pricing_type, unit, weight_per_piece, material, quantity, priority, status, drawing_file, product_image, remarks)
-                 VALUES (?, ?, ?, ?, ?, '', '00', 'PCS', 'PCS', 0, '', 0, 'Low', 'Received', '', '', ?)"
-            );
+            $hasProductDescription = productMasterColumnExists($conn, 'description');
+            $productInsertSql = $hasProductDescription
+                ? "INSERT INTO products
+                   (company_id, product_code, product_name, default_rate, part_number, drawing_number, revision_no, pricing_type, unit, weight_per_piece, material, quantity, priority, status, drawing_file, product_image, remarks, description)
+                   VALUES (?, ?, ?, ?, ?, '', '00', 'PCS', 'PCS', 0, '', 0, 'Low', 'Active', '', '', ?, ?)"
+                : "INSERT INTO products
+                   (company_id, product_code, product_name, default_rate, part_number, drawing_number, revision_no, pricing_type, unit, weight_per_piece, material, quantity, priority, status, drawing_file, product_image, remarks)
+                   VALUES (?, ?, ?, ?, ?, '', '00', 'PCS', 'PCS', 0, '', 0, 'Low', 'Active', '', '', ?)";
+            $productInsertStmt = mysqli_prepare($conn, $productInsertSql);
             if (!$productInsertStmt) {
                 throw new Exception("Product Master insert prepare failed: " . mysqli_error($conn));
             }
@@ -1077,16 +1090,32 @@ try {
             $part_number = $row['catalog_part_number'];
             $product_remarks = 'Saved from quotation ' . $quotation_no;
 
-            mysqli_stmt_bind_param(
-                $productInsertStmt,
-                "isssss",
-                $companyId,
-                $product_code,
-                $product_name,
-                $default_rate,
-                $part_number,
-                $product_remarks
-            );
+            $default_rate = $default_rate === '' ? 0.0 : (float)$default_rate;
+            if ($hasProductDescription) {
+                $product_description = $row['catalog_description'];
+                mysqli_stmt_bind_param(
+                    $productInsertStmt,
+                    "issdsss",
+                    $companyId,
+                    $product_code,
+                    $product_name,
+                    $default_rate,
+                    $part_number,
+                    $product_remarks,
+                    $product_description
+                );
+            } else {
+                mysqli_stmt_bind_param(
+                    $productInsertStmt,
+                    "issdss",
+                    $companyId,
+                    $product_code,
+                    $product_name,
+                    $default_rate,
+                    $part_number,
+                    $product_remarks
+                );
+            }
 
             if (!mysqli_stmt_execute($productInsertStmt)) {
                 throw new Exception("Product Master save failed: " . mysqli_stmt_error($productInsertStmt));
