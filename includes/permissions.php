@@ -493,6 +493,10 @@ function erpPermissionMap()
             'Super Admin'
         ],
 
+        'superadmin.product_fields' => [
+            'Super Admin'
+        ],
+
         'superadmin.templates' => [
             'Super Admin'
         ],
