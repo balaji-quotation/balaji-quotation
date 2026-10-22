@@ -19,7 +19,7 @@ $result = $conn->query(
 function templateEscape($v): string { return htmlspecialchars((string)($v ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
 ?>
 <div class="content-page"><div class="content"><div class="container-fluid">
-    <div class="page-title-box d-flex justify-content-between align-items-center"><div><h4 class="page-title">Quotation Templates</h4><p class="text-muted">Templates are versioned. Existing quotations keep their saved version.</p></div><a class="btn btn-primary" href="edit.php">Create template</a></div>
+    <div class="page-title-box d-flex justify-content-between align-items-center flex-wrap gap-2"><div><h4 class="page-title">Quotation Templates</h4><p class="text-muted">Templates are versioned. Existing quotations keep their saved version.</p></div><div class="d-flex gap-2"><a class="btn btn-outline-primary" href="../product_fields/index.php">Product Master Fields</a><a class="btn btn-primary" href="edit.php">Create template</a></div></div>
     <?php if (isset($_GET['saved'])) { ?><div class="alert alert-success">Template version saved.</div><?php } ?>
     <div class="card"><div class="card-body table-responsive"><table class="table table-striped align-middle">
         <thead><tr><th>Company</th><th>Name</th><th>Current version</th><th>Versions</th><th>Status</th><th>Updated</th><th></th></tr></thead><tbody>
