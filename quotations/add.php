@@ -1662,14 +1662,14 @@ document.addEventListener(
         // RENDER QUOTATION TABLE
         // =================================================
 
-        function applyCatalogProduct(row, productId) {
+        function catalogCellValues(productId) {
             const product = productCatalog.find(function (item) {
                 return String(item.id) === String(productId);
             });
-            if (!product) return;
+            if (!product) return {};
 
-            row.querySelectorAll("[data-cell-index]").forEach(function (input) {
-                const column = columns[Number(input.dataset.cellIndex)] || {};
+            const values = {};
+            columns.forEach(function (column, index) {
                 const label = String(column.label || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
                 let value = null;
 
@@ -1683,8 +1683,32 @@ document.addEventListener(
                     value = product.product_name || "";
                 }
 
-                if (value !== null && value !== "") input.value = value;
+                if (value !== null && value !== "") values[String(index)] = String(value);
             });
+            return values;
+        }
+
+        function clearUnchangedCatalogValues(row, appliedValues) {
+            row.querySelectorAll("[data-cell-index]").forEach(function (input) {
+                const index = String(Number(input.dataset.cellIndex));
+                if (
+                    Object.prototype.hasOwnProperty.call(appliedValues, index) &&
+                    String(input.value) === appliedValues[index]
+                ) {
+                    input.value = "";
+                }
+            });
+        }
+
+        function applyCatalogProduct(row, productId) {
+            const values = catalogCellValues(productId);
+            row.querySelectorAll("[data-cell-index]").forEach(function (input) {
+                const index = String(Number(input.dataset.cellIndex));
+                if (Object.prototype.hasOwnProperty.call(values, index)) {
+                    input.value = values[index];
+                }
+            });
+            return values;
         }
 
         function renderQuotationTable() {
@@ -1853,9 +1877,25 @@ document.addEventListener(
                 });
 
                 productPicker.value = existingProductIds[rowIndex] || "";
+                productPicker.dataset.appliedCatalogValues = productPicker.value
+                    ? JSON.stringify(catalogCellValues(productPicker.value))
+                    : "{}";
 
                 productPicker.addEventListener("change", function () {
-                    if (this.value !== "") applyCatalogProduct(tr, this.value);
+                    let previouslyApplied = {};
+                    try {
+                        previouslyApplied = JSON.parse(this.dataset.appliedCatalogValues || "{}");
+                    } catch (error) {
+                        previouslyApplied = {};
+                    }
+                    clearUnchangedCatalogValues(tr, previouslyApplied);
+
+                    if (this.value !== "") {
+                        this.dataset.appliedCatalogValues = JSON.stringify(applyCatalogProduct(tr, this.value));
+                    } else {
+                        this.dataset.appliedCatalogValues = "{}";
+                    }
+
                     const saveProductCheckbox = tr.querySelector(".save-to-product-checkbox");
                     if (saveProductCheckbox) {
                         saveProductCheckbox.disabled = this.value !== "";
