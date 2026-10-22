@@ -12,6 +12,7 @@ require_once __DIR__ . '/../includes/permissions.php';
 erpRequireCompanyUser($conn);
 erpRequire('quotations.view');
 $companyId = erpCurrentCompanyId();
+$currentUserId = (int)($_SESSION['user_id'] ?? 0);
 include("../includes/header.php");
 include("../includes/sidebar.php");
 
@@ -1081,6 +1082,7 @@ if (
 ?>
 
 <?php
+$canEditQuotation = (int)($row['created_by'] ?? 0) === $currentUserId;
 $followup_info =
     quotationFollowupInfo(
         $row
@@ -1304,6 +1306,7 @@ if (
         View
     </a>
 
+    <?php if ($canEditQuotation) { ?>
     <a
         href="edit.php?id=<?= intval(
             $row[
@@ -1329,6 +1332,7 @@ if (
         <i class="mdi mdi-file-document-edit-outline"></i>
         Revise
     </a>
+    <?php } ?>
 
 
     <a
