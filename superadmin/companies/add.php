@@ -59,7 +59,7 @@ unset($_SESSION['company_error']);
                     <?php while ($template = $templateResult->fetch_assoc()) { ?>
                         <option value="<?= (int)$template['version_id'] ?>"><?= companyAddEscape($template['template_name']) ?> · v<?= (int)$template['version_number'] ?></option>
                     <?php } ?>
-                </select><small class="text-muted">This template is assigned to the first user and loads automatically for new quotations.</small></div>
+                </select><small class="text-muted">A company-specific copy of this template version will be created and assigned to the first user.</small></div>
             </div>
             <p class="text-muted">Share the temporary password with the administrator using a secure channel. It is stored only as a password hash.</p>
             <button class="btn btn-primary" type="submit">Create company</button>
