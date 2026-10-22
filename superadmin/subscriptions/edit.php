@@ -27,7 +27,7 @@ $error = $_SESSION['subscription_error'] ?? ''; unset($_SESSION['subscription_er
     <div class="alert alert-info">Active users: <?= $activeUsers ?>. Business allows 1 active user; Premium allows 2. Existing quotations remain available after expiry in read-only mode.</div>
     <?php if ($activeUsers > 2) { ?>
         <div class="alert alert-warning" role="alert">
-            <strong>Plan limit exceeded:</strong> This company has <?= $activeUsers ?> active users, above the Premium limit of 2. A plan cannot be assigned until the active-user count fits. <a href="../users/index.php">Review company users</a>.
+            <strong>Existing users are preserved:</strong> This company has <?= $activeUsers ?> active users. They will remain unchanged when you assign a plan. Business allows 1 active user and Premium allows 2; while the count is above the selected plan limit, new users cannot be created or reactivated. <a href="../users/index.php">Review company users</a>.
         </div>
     <?php } ?>
     <form method="post" action="update.php">
