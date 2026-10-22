@@ -890,7 +890,7 @@ $term_sets_json =
         </div>
 
         <div class="quote-section-note">
-            Columns are assigned by Super Admin. Add rows and enter item values below.
+            Columns are set by Super Admin. Use Template Change Request to request edits. Add item rows below. The Save to Product Master option requires Product Master add access.
         </div>
 
     </div>
@@ -1424,15 +1424,12 @@ document.addEventListener(
                             </div>
 
                             <div>
-                                <button
-                                    type="button"
-                                    class="btn btn-outline-danger btn-sm remove-column"
-                                    disabled
-                                    data-index="${index}"
-                                    title="Remove Column"
+                                <span
+                                    class="small text-muted"
+                                    title="Template columns are managed by Super Admin"
                                 >
-                                    ×
-                                </button>
+                                    Fixed
+                                </span>
                             </div>
 
                         </div>
