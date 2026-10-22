@@ -893,42 +893,14 @@ foreach ($statuses as $status) {
 <div class="card-body">
 
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-
-<div>
-    <div class="quote-section-title">
-        Quotation Table
+    <div>
+        <div class="quote-section-title">Items</div>
+        <div class="quote-section-note">Edit the products and rates in this quotation.</div>
     </div>
-    <div class="quote-section-note">
-        Edit row values and terms. Table columns stay with the assigned quotation template.
-    </div>
+    <button type="button" class="btn btn-primary btn-sm" id="addRowBtn">+ Add Item</button>
 </div>
 
-<div class="d-flex gap-1">
-    <button
-        type="button"
-        class="btn btn-outline-primary btn-sm"
-        id="addColumnBtn"
-        disabled
-    >
-        Columns fixed by template
-    </button>
-
-    <button
-        type="button"
-        class="btn btn-primary btn-sm"
-        id="addRowBtn"
-    >
-        + Row
-    </button>
-</div>
-
-</div>
-
-
-<div
-    class="column-config-wrap mb-3"
-    id="columnConfig"
-></div>
+<div id="columnConfig" hidden aria-hidden="true"></div>
 
 
 <div class="table-responsive">
@@ -1424,250 +1396,11 @@ document.addEventListener(
         // =================================================
 
         function renderColumnEditors() {
-
             columnConfig.innerHTML = "";
-
-            columns.forEach(
-                function (column, index) {
-
-                    const box =
-                        document.createElement(
-                            "div"
-                        );
-
-                    box.className =
-                        "column-editor";
-
-                    box.innerHTML = `
-                        <button
-                            type="button"
-                            class="column-remove"
-                            disabled
-                            title="Remove Column"
-                        >×</button>
-
-                        <div class="column-editor-title">
-                            Column ${index + 1}
-                        </div>
-
-                        <div class="mb-2">
-                            <label class="quote-form-label">
-                                Heading
-                            </label>
-                            <input
-                                type="text"
-                                name="column_label[]" disabled
-                                class="form-control form-control-sm column-label"
-                                value=""
-                                required
-                            >
-                        </div>
-
-                        <div class="mb-2">
-                            <label class="quote-form-label">
-                                Unit
-                            </label>
-                            <input
-                                type="text"
-                                name="column_unit[]" disabled
-                                class="form-control form-control-sm column-unit"
-                                value=""
-                                placeholder="KG / ₹/PCS"
-                            >
-                        </div>
-
-                        <div class="mb-2">
-                            <label class="quote-form-label">
-                                Type
-                            </label>
-                            <select
-                                name="column_type[]" disabled
-                                class="form-select form-select-sm column-type"
-                            >
-                                <option value="text">Text</option>
-                                <option value="number">Number</option>
-                                <option value="currency">Currency</option>
-                                <option value="textarea">Textarea</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="quote-form-label">
-                                Align
-                            </label>
-                            <select
-                                name="column_align[]" disabled
-                                class="form-select form-select-sm column-align"
-                            >
-                                <option value="left">Left</option>
-                                <option value="center">Center</option>
-                                <option value="right">Right</option>
-                            </select>
-                        </div>
-                    `;
-
-                    const label =
-                        box.querySelector(
-                            ".column-label"
-                        );
-
-                    const unit =
-                        box.querySelector(
-                            ".column-unit"
-                        );
-
-                    const type =
-                        box.querySelector(
-                            ".column-type"
-                        );
-
-                    const align =
-                        box.querySelector(
-                            ".column-align"
-                        );
-
-                    label.value =
-                        column.label || "";
-
-                    unit.value =
-                        normalizeCurrencyUnit(
-                            column.unit || ""
-                        );
-
-                    column.unit = unit.value;
-
-                    type.value =
-                        column.type || "text";
-
-                    align.value =
-                        column.align || "left";
-
-
-                    label.addEventListener(
-                        "input",
-                        function () {
-                            column.label =
-                                this.value;
-                            renderHeadOnly();
-                        }
-                    );
-
-                    unit.addEventListener(
-                        "input",
-                        function () {
-                            column.unit =
-                                this.value;
-                            renderHeadOnly();
-                        }
-                    );
-
-                    type.addEventListener(
-                        "change",
-                        function () {
-
-                            column.type =
-                                this.value;
-
-                            if (
-                                column.type ===
-                                "currency"
-                            ) {
-
-                                let oldUnit =
-                                    String(
-                                        column.unit || ""
-                                    );
-
-                                oldUnit =
-                                    oldUnit.replace(
-                                        /^[₹$€£]/u,
-                                        ""
-                                    );
-
-                                if (oldUnit === "") {
-                                    oldUnit = "/PCS";
-                                }
-
-                                if (
-                                    !oldUnit.startsWith(
-                                        "/"
-                                    )
-                                ) {
-                                    oldUnit =
-                                        "/" + oldUnit;
-                                }
-
-                                column.unit =
-                                    getCurrencySymbol() +
-                                    oldUnit;
-                            }
-
-                            captureRows();
-                            renderAll();
-                        }
-                    );
-
-                    align.addEventListener(
-                        "change",
-                        function () {
-                            column.align =
-                                this.value;
-                            renderTable();
-                        }
-                    );
-
-
-                    box
-                        .querySelector(
-                            ".column-remove"
-                        )
-                        .addEventListener(
-                            "click",
-                            function () {
-
-                                if (
-                                    columns.length <= 1
-                                ) {
-                                    alert(
-                                        "At least one column is required."
-                                    );
-                                    return;
-                                }
-
-                                captureRows();
-
-                                columns.splice(
-                                    index,
-                                    1
-                                );
-
-                                liveRows =
-                                    liveRows.map(
-                                        row => {
-                                            const copy =
-                                                [...row];
-                                            copy.splice(
-                                                index,
-                                                1
-                                            );
-                                            return copy;
-                                        }
-                                    );
-
-                                renderAll();
-                            }
-                        );
-
-
-                    columnConfig.appendChild(
-                        box
-                    );
-                }
-            );
         }
 
 
-        // =================================================
+                // =================================================
         // TABLE HEADER
         // =================================================
 
@@ -1938,48 +1671,8 @@ document.addEventListener(
 
 
         // =================================================
-        // ADD COLUMN
         // =================================================
-
-        document
-            .getElementById(
-                "addColumnBtn"
-            )
-            .addEventListener(
-                "click",
-                function () {
-
-                    captureRows();
-
-                    columns.push({
-                        key:
-                            "col_" +
-                            (
-                                columns.length +
-                                1
-                            ),
-                        label:
-                            "New Column",
-                        unit: "",
-                        type: "text",
-                        align: "left"
-                    });
-
-                    liveRows =
-                        liveRows.map(
-                            function (row) {
-                                row.push("");
-                                return row;
-                            }
-                        );
-
-                    renderAll();
-                }
-            );
-
-
-        // =================================================
-        // ADD ROW
+                // ADD ROW
         // =================================================
 
         document
