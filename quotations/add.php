@@ -890,7 +890,7 @@ $term_sets_json =
         </div>
 
         <div class="quote-section-note">
-            Columns are set by Super Admin. Use Template Change Request to request edits. Add item rows below. The Save to Product Master option requires Product Master add access.
+            Columns are set by Super Admin. Use Template Change Request to request edits. Add item rows below. Quotation users can save manual items to Product Master with the row checkbox.
         </div>
 
     </div>
@@ -1250,7 +1250,7 @@ document.addEventListener(
 
         const defaultColumns = <?= json_encode($templateConfig['columns'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
         const productCatalog = <?= json_encode($products, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-        const canSaveProducts = <?= erpCan('products.add') ? 'true' : 'false'; ?>;
+        const canSaveProducts = <?= erpCan('quotations.save_products_to_master') ? 'true' : 'false'; ?>;
         let columns = Array.isArray(defaultColumns) && defaultColumns.length
             ? defaultColumns
             : [{label:"Description",unit:"",type:"text",align:"left"}];
