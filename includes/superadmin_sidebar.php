@@ -16,8 +16,7 @@ erpRequire('superadmin.dashboard');
                 <li><a href="/quotation/superadmin/companies/index.php" class="side-nav-link"><i class="ri-building-line"></i><span>Manage Companies</span></a></li>
                 <li><a href="/quotation/superadmin/users/index.php" class="side-nav-link"><i class="ri-user-settings-line"></i><span>Manage Users</span></a></li>
                 <li><a href="/quotation/superadmin/templates/index.php" class="side-nav-link"><i class="ri-file-list-3-line"></i><span>Quotation Templates</span></a></li>
-                <li><a href="/quotation/superadmin/product_fields/index.php" class="side-nav-link"><i class="ri-list-settings-line"></i><span>Product Master Fields</span></a></li>
-                <li><a href="/quotation/superadmin/change_requests/index.php" class="side-nav-link"><i class="ri-message-2-line"></i><span>Change Requests</span></a></li>
+                                <li><a href="/quotation/superadmin/change_requests/index.php" class="side-nav-link"><i class="ri-message-2-line"></i><span>Change Requests</span></a></li>
                 <li><a href="/quotation/superadmin/subscriptions/index.php" class="side-nav-link"><i class="ri-bank-card-line"></i><span>Subscriptions</span></a></li>
                 <li><a href="/quotation/logout.php" class="side-nav-link"><i class="ri-logout-box-line"></i><span>Logout</span></a></li>
             </ul>
