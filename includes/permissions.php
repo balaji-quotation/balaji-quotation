@@ -317,6 +317,18 @@ function erpPermissionMap()
             'User'
         ],
 
+        // Allow quotation creators to add only the manual items they submit
+        // through the quotation builder, without granting Product Master CRUD access.
+        'quotations.save_products_to_master' => [
+            'Administrator',
+            'Manager',
+            'Production',
+            'Quality',
+            'Dispatch',
+            'Accounts',
+            'User'
+        ],
+
         'quotations.edit' => [
             'Administrator',
             'Manager',
