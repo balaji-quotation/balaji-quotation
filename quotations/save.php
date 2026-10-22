@@ -394,6 +394,11 @@ if (!is_array($posted_product_ids)) {
     $posted_product_ids = [];
 }
 
+$posted_save_to_product = $_POST['save_to_product'] ?? [];
+if (!is_array($posted_save_to_product)) {
+    $posted_save_to_product = [];
+}
+
 $productCheckStmt = $conn->prepare(
     'SELECT id FROM products WHERE id = ? AND company_id = ? LIMIT 1'
 );
@@ -417,6 +422,12 @@ foreach (
     }
 
 
+    $saveToProduct = (string)($posted_save_to_product[$postedIndex] ?? '') === '1';
+    if ($saveToProduct && !erpCan('products.add')) {
+        $productCheckStmt->close();
+        quoteFail('Only users with Product Master access can save quotation items to the catalog.');
+    }
+
     $rawProductId = trim((string)($posted_product_ids[$postedIndex] ?? ''));
     $productId = 0;
     if ($rawProductId !== '') {
@@ -426,6 +437,10 @@ foreach (
             quoteFail('Invalid product selection.');
         }
         $productId = (int)$validatedProductId;
+        if ($saveToProduct) {
+            $productCheckStmt->close();
+            quoteFail('Choose Manual entry before saving a quotation item to Product Master.');
+        }
         $productCheckStmt->bind_param('ii', $productId, $companyId);
         $productCheckStmt->execute();
         if ($productCheckStmt->get_result()->num_rows !== 1) {
@@ -479,6 +494,54 @@ foreach (
     }
 
 
+    $catalogName = '';
+    $catalogRate = '';
+    $catalogPartNumber = '';
+    if ($saveToProduct) {
+        $nameCandidates = [
+            'productname' => 1,
+            'itemname' => 2,
+            'productdescription' => 3,
+            'itemdescription' => 4,
+            'description' => 5,
+            'item' => 6,
+            'product' => 7,
+            'material' => 8,
+            'particular' => 9,
+            'particulars' => 10,
+            'details' => 11
+        ];
+        $bestNamePriority = PHP_INT_MAX;
+
+        foreach ($columns as $column) {
+            $labelKey = strtolower((string)preg_replace('/[^a-z0-9]+/i', '', $column['column_label']));
+            $value = quoteClean($row_json_data[$column['column_key']] ?? '');
+            if ($value === '') {
+                continue;
+            }
+
+            if (isset($nameCandidates[$labelKey]) && $nameCandidates[$labelKey] < $bestNamePriority) {
+                $catalogName = $value;
+                $bestNamePriority = $nameCandidates[$labelKey];
+            }
+            if ($catalogRate === '' && in_array($labelKey, ['rate', 'price', 'unitrate', 'unitprice', 'rateperunit', 'priceperunit'], true)) {
+                $catalogRate = $value;
+            }
+            if ($catalogPartNumber === '' && in_array($labelKey, ['partnumber', 'partno', 'part'], true)) {
+                $catalogPartNumber = $value;
+            }
+        }
+
+        if ($catalogName === '') {
+            $productCheckStmt->close();
+            quoteFail('Add a value in the Product Name or Description column before saving this item to Product Master.');
+        }
+        if ($catalogRate !== '' && (!is_numeric($catalogRate) || !is_finite((float)$catalogRate) || (float)$catalogRate < 0)) {
+            $productCheckStmt->close();
+            quoteFail('Product Master rate must be a valid non-negative number.');
+        }
+    }
+
     $item_reference = '';
 
     if (
@@ -506,7 +569,14 @@ foreach (
             $productId > 0 ? $productId : null,
         'item_reference' =>
             $item_reference,
-
+        'save_to_product' =>
+            $saveToProduct,
+        'catalog_name' =>
+            $catalogName,
+        'catalog_rate' =>
+            $catalogRate,
+        'catalog_part_number' =>
+            $catalogPartNumber,
         'row_data' =>
             $row_json_data
     ];
@@ -968,6 +1038,23 @@ try {
     }
 
 
+    $productInsertStmt = null;
+    foreach ($rows as $row) {
+        if (!empty($row['save_to_product'])) {
+            $productInsertStmt = mysqli_prepare(
+                $conn,
+                "INSERT INTO products
+                 (company_id, product_code, product_name, default_rate, part_number, drawing_number, revision_no, pricing_type, unit, weight_per_piece, material, quantity, priority, status, drawing_file, product_image, remarks)
+                 VALUES (?, ?, ?, ?, ?, '', '00', 'PCS', 'PCS', 0, '', 0, 'Low', 'Received', '', '', ?)"
+            );
+            if (!$productInsertStmt) {
+                throw new Exception("Product Master insert prepare failed: " . mysqli_error($conn));
+            }
+            break;
+        }
+    }
+
+    $savedProductCount = 0;
     foreach (
         $rows
         as $index =>
@@ -982,6 +1069,31 @@ try {
 
         $product_id =
             $row['product_id'];
+
+        if (!empty($row['save_to_product'])) {
+            $product_code = 'QTN-' . $companyId . '-' . bin2hex(random_bytes(8));
+            $product_name = $row['catalog_name'];
+            $default_rate = $row['catalog_rate'];
+            $part_number = $row['catalog_part_number'];
+            $product_remarks = 'Saved from quotation ' . $quotation_no;
+
+            mysqli_stmt_bind_param(
+                $productInsertStmt,
+                "isssss",
+                $companyId,
+                $product_code,
+                $product_name,
+                $default_rate,
+                $part_number,
+                $product_remarks
+            );
+
+            if (!mysqli_stmt_execute($productInsertStmt)) {
+                throw new Exception("Product Master save failed: " . mysqli_stmt_error($productInsertStmt));
+            }
+            $product_id = (int)mysqli_insert_id($conn);
+            $savedProductCount++;
+        }
 
         $item_reference =
             $row[
@@ -1036,6 +1148,9 @@ try {
     mysqli_stmt_close(
         $row_stmt
     );
+    if ($productInsertStmt instanceof mysqli_stmt) {
+        mysqli_stmt_close($productInsertStmt);
+    }
     $productCheckStmt->close();
 
 
@@ -1225,8 +1340,9 @@ try {
     );
 
 
-    $_SESSION['quotation_success'] =
-        "Quotation saved successfully.";
+    $_SESSION['quotation_success'] = $savedProductCount > 0
+        ? "Quotation saved successfully. {$savedProductCount} item(s) added to Product Master."
+        : "Quotation saved successfully.";
 
 
     header(
