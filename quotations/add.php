@@ -20,6 +20,7 @@ if (!isset($_SESSION['user_id'])) {
 include("../includes/db.php");
 require_once __DIR__ . '/../includes/permissions.php';
 require_once __DIR__ . '/../includes/quotation_numbering.php';
+require_once __DIR__ . '/../includes/product_master.php';
 erpRequireCompanyUser($conn);
 erpRequire('quotations.add');
 $companyId = erpCurrentCompanyId();
@@ -95,11 +96,12 @@ while (
 
 $products = [];
 
+$productDescriptionSelect = productMasterColumnExists($conn, 'description') ? ', description' : '';
 $product_sql = "
     SELECT
         id,
         product_code,
-        product_name,
+        product_name" . $productDescriptionSelect . ",
         part_number,
         default_rate
     FROM products
@@ -1370,7 +1372,9 @@ document.addEventListener(
                     value = product.part_number || "";
                 } else if (/^(rate|price|unitrate|unitprice|rateperunit|priceperunit)$/.test(label)) {
                     value = product.default_rate ?? "";
-                } else if (/description|product|item|material|particular|details/.test(label)) {
+                } else if (/^(description|productdescription|itemdescription|details)$/.test(label)) {
+                    value = product.description || product.product_name || "";
+                } else if (/product|item|material|particular/.test(label)) {
                     value = product.product_name || "";
                 }
 
