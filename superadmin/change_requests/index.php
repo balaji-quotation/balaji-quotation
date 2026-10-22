@@ -45,7 +45,12 @@ include __DIR__ . '/../../includes/superadmin_sidebar.php';
 ?>
 <div class="content-page"><div class="content"><div class="container-fluid">
     <div class="page-title-box"><h4 class="page-title">Template Change Requests</h4></div>
-    <?php while ($request = $requests->fetch_assoc()) { ?>
+    <?php if ($requests->num_rows === 0) { ?>
+        <div class="card"><div class="card-body text-center py-5">
+            <h5 class="mb-2">No template change requests yet</h5>
+            <p class="text-muted mb-0">Requests submitted by company users will appear here for review.</p>
+        </div></div>
+    <?php } else { while ($request = $requests->fetch_assoc()) { ?>
         <div class="card"><div class="card-body">
             <div class="d-flex justify-content-between"><div><h5><?= adminRequestEscape($request['title']) ?></h5><div class="text-muted"><?= adminRequestEscape($request['company_name']) ?> · <?= adminRequestEscape($request['requester_name']) ?> · <?= adminRequestEscape(date('d-m-Y H:i', strtotime($request['created_at']))) ?></div></div><span class="badge bg-secondary"><?= adminRequestEscape($request['status']) ?></span></div>
             <p class="mt-3"><?= nl2br(adminRequestEscape($request['details'])) ?></p>
@@ -60,7 +65,7 @@ include __DIR__ . '/../../includes/superadmin_sidebar.php';
                 <div class="col-12"><small class="text-muted">Create a template version first. Approving applies it to users assigned to that template; previous quotations keep their saved version.</small></div>
             </form>
         </div></div>
-    <?php } ?>
+    <?php } } ?>
 </div></div></div>
 <script>
 document.querySelectorAll('.request-review-form').forEach(function (form) {
