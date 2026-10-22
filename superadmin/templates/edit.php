@@ -43,7 +43,7 @@ $err = $_SESSION['template_error'] ?? ''; unset($_SESSION['template_error']);
 <div class="content-page"><div class="content"><div class="container-fluid">
     <div class="page-title-box"><h4 class="page-title"><?= $template ? 'Edit quotation template' : 'Create quotation template' ?></h4></div>
     <?php if ($err !== '') { ?><div class="alert alert-danger"><?= templateEditEscape($err) ?></div><?php } ?>
-    <form method="post" action="save.php">
+    <form method="post" action="save.php" id="templateForm">
         <input type="hidden" name="csrf_token" value="<?= templateEditEscape($_SESSION['csrf_token']) ?>">
         <input type="hidden" name="template_id" value="<?= (int)($template['id'] ?? 0) ?>">
         <?php if ($template) { ?>
@@ -67,7 +67,17 @@ $err = $_SESSION['template_error'] ?? ''; unset($_SESSION['template_error']);
             <div class="col-md-6 mb-3"><label class="form-label">Template name *</label><input class="form-control" name="template_name" maxlength="150" required value="<?= templateEditEscape($template['template_name'] ?? '') ?>"></div>
             <div class="col-md-6 mb-3"><label class="form-label">Status</label><select name="is_active" class="form-select"><option value="1" <?= !isset($template['is_active']) || $template['is_active'] ? 'selected' : '' ?>>Active</option><option value="0" <?= isset($template['is_active']) && !$template['is_active'] ? 'selected' : '' ?>>Inactive</option></select></div>
             <div class="col-12 mb-3"><label class="form-label">Description</label><input class="form-control" name="description" maxlength="2000" value="<?= templateEditEscape($template['description'] ?? '') ?>"></div>
-            <div class="col-12 mb-3"><label class="form-label">Quotation columns (JSON array)</label><textarea class="form-control font-monospace" name="columns_json" rows="8" required><?= templateEditEscape(json_encode($config['columns'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) ?></textarea><small>Each item: label, unit, type (text/number/currency/textarea), align (left/center/right). Standard totals recognize Qty/Quantity and Rate/Price labels, or an Amount label.</small></div>
+            <div class="col-12 mb-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <label class="form-label mb-0">Quotation item fields</label>
+                    <button class="btn btn-outline-primary btn-sm" type="button" id="addTemplateColumn">+ Add Field</button>
+                </div>
+                <p class="small text-muted mt-1 mb-2">Set the columns this business needs, for example Description, Quantity, Unit Price and Total. These fields appear in quotations assigned to this template.</p>
+                <div id="templateColumnBuilder" class="vstack gap-2"></div>
+                <textarea class="d-none" name="columns_json" id="columnsJson" required><?= templateEditEscape(json_encode($config['columns'], JSON_UNESCAPED_UNICODE)) ?></textarea>
+                <div id="columnBuilderError" class="small text-danger mt-1"></div>
+                <small class="text-muted">For automatic totals, use Qty/Quantity and Rate/Price columns, or an Amount column. Existing quotations keep their saved template version.</small>
+            </div>
             <div class="col-md-6 mb-3"><label class="form-label">Default commercial terms (JSON array)</label><textarea class="form-control font-monospace" name="commercial_terms_json" rows="8" required><?= templateEditEscape(json_encode($config['commercial_terms'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) ?></textarea></div>
             <div class="col-md-6 mb-3"><label class="form-label">Default general terms (JSON array of strings)</label><textarea class="form-control font-monospace" name="general_terms_json" rows="8" required><?= templateEditEscape(json_encode($config['general_terms'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) ?></textarea></div>
             <div class="col-md-3 mb-3"><label class="form-label">Calculation mode</label><select name="calculation_mode" class="form-select"><option value="standard" <?= ($config['calculation']['mode'] ?? '') === 'standard' ? 'selected' : '' ?>>Standard</option><option value="custom" <?= ($config['calculation']['mode'] ?? '') === 'custom' ? 'selected' : '' ?>>Custom formula</option></select></div>
@@ -84,4 +94,77 @@ $err = $_SESSION['template_error'] ?? ''; unset($_SESSION['template_error']);
         </div><p class="text-muted">Saving an existing template creates a new version. Previously issued quotations keep their version snapshot.</p><button class="btn btn-primary" type="submit">Save template version</button> <a class="btn btn-light" href="index.php">Cancel</a></div></div>
     </form>
 </div></div></div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const builder = document.getElementById('templateColumnBuilder');
+    const addButton = document.getElementById('addTemplateColumn');
+    const jsonField = document.getElementById('columnsJson');
+    const form = document.getElementById('templateForm');
+    const error = document.getElementById('columnBuilderError');
+    const initial = <?= json_encode(array_values($config['columns'] ?? []), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    let columns = Array.isArray(initial) ? initial.map(function (column) {
+        return {
+            label: String(column.label || ''),
+            unit: String(column.unit || ''),
+            type: ['text', 'number', 'currency', 'textarea'].includes(column.type) ? column.type : 'text',
+            align: ['left', 'center', 'right'].includes(column.align) ? column.align : 'left'
+        };
+    }) : [];
+
+    function render() {
+        builder.replaceChildren();
+        columns.forEach(function (column, index) {
+            const row = document.createElement('div');
+            row.className = 'row g-2 align-items-end border rounded p-2 mx-0';
+            row.innerHTML =
+                '<div class="col-lg-4 col-md-12"><label class="form-label small">Field name</label><input class="form-control form-control-sm js-field-label" maxlength="100" required></div>' +
+                '<div class="col-lg-2 col-md-4"><label class="form-label small">Unit (optional)</label><input class="form-control form-control-sm js-field-unit" maxlength="30" placeholder="kg, PCS, ₹/PCS"></div>' +
+                '<div class="col-lg-2 col-md-3"><label class="form-label small">Input type</label><select class="form-select form-select-sm js-field-type"><option value="text">Text</option><option value="number">Number</option><option value="currency">Price / Currency</option><option value="textarea">Long text</option></select></div>' +
+                '<div class="col-lg-2 col-md-3"><label class="form-label small">Alignment</label><select class="form-select form-select-sm js-field-align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>' +
+                '<div class="col-lg-2 col-md-2"><button type="button" class="btn btn-outline-danger btn-sm w-100 js-remove-field">Remove</button></div>';
+            row.querySelector('.js-field-label').value = column.label;
+            row.querySelector('.js-field-unit').value = column.unit;
+            row.querySelector('.js-field-type').value = column.type;
+            row.querySelector('.js-field-align').value = column.align;
+            row.querySelector('.js-remove-field').addEventListener('click', function () {
+                columns.splice(index, 1);
+                render();
+            });
+            builder.appendChild(row);
+        });
+    }
+
+    addButton.addEventListener('click', function () {
+        if (columns.length >= 20) {
+            error.textContent = 'A quotation template can have up to 20 item fields.';
+            return;
+        }
+        error.textContent = '';
+        columns.push({label: '', unit: '', type: 'text', align: 'left'});
+        render();
+        builder.lastElementChild.querySelector('.js-field-label').focus();
+    });
+
+    form.addEventListener('submit', function (event) {
+        error.textContent = '';
+        const rows = Array.from(builder.children);
+        const values = rows.map(function (row) {
+            return {
+                label: row.querySelector('.js-field-label').value.trim(),
+                unit: row.querySelector('.js-field-unit').value.trim(),
+                type: row.querySelector('.js-field-type').value,
+                align: row.querySelector('.js-field-align').value
+            };
+        });
+        if (!values.length || values.some(function (field) { return field.label === ''; })) {
+            event.preventDefault();
+            error.textContent = 'Add at least one field and give each field a name.';
+            return;
+        }
+        jsonField.value = JSON.stringify(values);
+    });
+
+    render();
+});
+</script>
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
