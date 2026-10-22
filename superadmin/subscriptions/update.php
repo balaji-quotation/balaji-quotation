@@ -43,10 +43,8 @@ if ($trialEnd !== null && $paidStart !== null && $paidStart <= $trialEnd) subscr
 $companyCheck = $conn->prepare('SELECT id FROM companies WHERE id = ? LIMIT 1');
 $companyCheck->bind_param('i', $id); $companyCheck->execute(); $exists = $companyCheck->get_result()->fetch_assoc(); $companyCheck->close();
 if (!$exists) subscriptionFail('Company not found.');
-$limit = $plan === 'Premium' ? 2 : 1;
-$userCount = $conn->prepare("SELECT COUNT(*) AS total FROM users WHERE company_id = ? AND status = 'Active'");
-$userCount->bind_param('i', $id); $userCount->execute(); $activeUsers = (int)($userCount->get_result()->fetch_assoc()['total'] ?? 0); $userCount->close();
-if ($activeUsers > $limit) subscriptionFail("This company has {$activeUsers} active users. Deactivate users before assigning the {$plan} plan.");
+// Preserve legacy active accounts when starting or renewing a subscription.
+ // User creation and reactivation remain capped by the assigned plan in the user handlers.
 
 $stmt = $conn->prepare(
     'UPDATE companies SET subscription_plan = ?, trial_start_date = ?, trial_end_date = ?, paid_start_date = ?, paid_end_date = ? WHERE id = ? LIMIT 1'
