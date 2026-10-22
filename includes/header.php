@@ -78,6 +78,13 @@ $base_url = "/quotation/dist/";
 
 $logged_user_name = 'Admin';
 
+$logged_user_role = trim((string) ($_SESSION['user_role'] ?? 'User'));
+if ($logged_user_role === 'super_admin') {
+    $logged_user_role = 'Super Admin';
+} else {
+    $logged_user_role = ucwords(str_replace(['_', '-'], ' ', $logged_user_role));
+}
+
 if (!empty($_SESSION['name'])) {
 
     $logged_user_name = $_SESSION['name'];
@@ -838,6 +845,14 @@ if (!empty($_SESSION['name'])) {
                                     ); ?>
 
                                 </h6>
+
+                                <span class="badge bg-primary-subtle text-primary mt-1">
+                                    <?= htmlspecialchars(
+                                        $logged_user_role,
+                                        ENT_QUOTES,
+                                        'UTF-8'
+                                    ); ?>
+                                </span>
 
                             </div>
 
