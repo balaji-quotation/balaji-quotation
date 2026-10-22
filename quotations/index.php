@@ -1306,7 +1306,7 @@ if (
         View
     </a>
 
-    <?php if ($canEditQuotation) { ?>
+    <?php if ($canEditQuotation && empty($_SESSION['subscription_read_only'])) { ?>
     <a
         href="edit.php?id=<?= intval(
             $row[
