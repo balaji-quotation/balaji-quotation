@@ -42,9 +42,11 @@ include __DIR__ . '/../includes/sidebar.php';
     </div></div>
     <div class="card"><div class="card-body table-responsive"><h5>Previous requests</h5>
         <table class="table"><thead><tr><th>Title</th><th>Status</th><th>Applied version</th><th>Submitted</th><th>Admin note</th></tr></thead><tbody>
-        <?php while ($request = $requests->fetch_assoc()) { ?>
+        <?php if ($requests->num_rows === 0) { ?>
+            <tr><td colspan="5" class="text-center text-muted py-4">No change requests submitted yet.</td></tr>
+        <?php } else { while ($request = $requests->fetch_assoc()) { ?>
             <tr><td><?= templateRequestEscape($request['title']) ?></td><td><?= templateRequestEscape($request['status']) ?></td><td><?= !empty($request['applied_template_name']) ? templateRequestEscape($request['applied_template_name']) . ' · v' . (int)$request['applied_version_number'] : '—' ?></td><td><?= templateRequestEscape(date('d-m-Y', strtotime($request['created_at']))) ?></td><td><?= templateRequestEscape($request['admin_note']) ?></td></tr>
-        <?php } ?>
+        <?php } } ?>
         </tbody></table>
     </div></div>
 </div></div></div>
