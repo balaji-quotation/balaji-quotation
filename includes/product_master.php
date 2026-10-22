@@ -74,8 +74,11 @@ function productMasterNormalizeCustomFields(mysqli $db, array $submitted, array 
             $value = trim((string)$raw);
         }
 
-        if ($field['is_required'] && $value === '') {
+        if ($field['is_required'] && ($field['field_type'] === 'checkbox' ? $value !== '1' : $value === '')) {
             throw new InvalidArgumentException($field['label'] . ' is required.');
+        }
+        if (strlen($value) > 10000) {
+            throw new InvalidArgumentException($field['label'] . ' is too long.');
         }
         if ($value !== '') {
             if ($field['field_type'] === 'number' && (!is_numeric($value) || !is_finite((float)$value))) {
