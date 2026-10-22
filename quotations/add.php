@@ -1250,6 +1250,7 @@ document.addEventListener(
 
         const defaultColumns = <?= json_encode($templateConfig['columns'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
         const productCatalog = <?= json_encode($products, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        const canSaveProducts = <?= erpCan('products.add') ? 'true' : 'false'; ?>;
         let columns = Array.isArray(defaultColumns) && defaultColumns.length
             ? defaultColumns
             : [{label:"Description",unit:"",type:"text",align:"left"}];
@@ -1853,28 +1854,33 @@ document.addEventListener(
 
                 productPicker.value = existingProductIds[rowIndex] || "";
 
-                const saveProductLabel = document.createElement("label");
-                saveProductLabel.className = "small text-muted d-flex align-items-center gap-1 mt-1";
-                const saveProductCheckbox = document.createElement("input");
-                saveProductCheckbox.type = "checkbox";
-                saveProductCheckbox.name = `save_to_product[${rowIndex}]`;
-                saveProductCheckbox.value = "1";
-                saveProductCheckbox.className = "form-check-input mt-0 save-to-product-checkbox";
-                saveProductCheckbox.checked = existingSaveToProduct[rowIndex] === "1";
-                saveProductLabel.appendChild(saveProductCheckbox);
-                const saveProductText = document.createElement("span");
-                saveProductText.textContent = "Save manual item to Product Master";
-                saveProductLabel.appendChild(saveProductText);
-
                 productPicker.addEventListener("change", function () {
                     if (this.value !== "") applyCatalogProduct(tr, this.value);
-                    saveProductCheckbox.disabled = this.value !== "";
-                    if (saveProductCheckbox.disabled) saveProductCheckbox.checked = false;
+                    const saveProductCheckbox = tr.querySelector(".save-to-product-checkbox");
+                    if (saveProductCheckbox) {
+                        saveProductCheckbox.disabled = this.value !== "";
+                        if (saveProductCheckbox.disabled) saveProductCheckbox.checked = false;
+                    }
                 });
-                saveProductCheckbox.disabled = productPicker.value !== "";
-                if (saveProductCheckbox.disabled) saveProductCheckbox.checked = false;
                 productTd.appendChild(productPicker);
-                productTd.appendChild(saveProductLabel);
+
+                if (canSaveProducts) {
+                    const saveProductLabel = document.createElement("label");
+                    saveProductLabel.className = "small text-muted d-flex align-items-center gap-1 mt-1";
+                    const saveProductCheckbox = document.createElement("input");
+                    saveProductCheckbox.type = "checkbox";
+                    saveProductCheckbox.name = `save_to_product[${rowIndex}]`;
+                    saveProductCheckbox.value = "1";
+                    saveProductCheckbox.className = "form-check-input mt-0 save-to-product-checkbox";
+                    saveProductCheckbox.checked = existingSaveToProduct[rowIndex] === "1";
+                    saveProductCheckbox.disabled = productPicker.value !== "";
+                    if (saveProductCheckbox.disabled) saveProductCheckbox.checked = false;
+                    saveProductLabel.appendChild(saveProductCheckbox);
+                    const saveProductText = document.createElement("span");
+                    saveProductText.textContent = "Save manual item to Product Master";
+                    saveProductLabel.appendChild(saveProductText);
+                    productTd.appendChild(saveProductLabel);
+                }
                 tr.appendChild(productTd);
 
                 const actionTd =
@@ -1974,6 +1980,8 @@ document.addEventListener(
 
                     const productPicker = row.querySelector(".product-master-picker");
                     if (productPicker) productPicker.name = `product_id[${rowIndex}]`;
+                    const saveProductCheckbox = row.querySelector(".save-to-product-checkbox");
+                    if (saveProductCheckbox) saveProductCheckbox.name = `save_to_product[${rowIndex}]`;
                 }
             );
         }
