@@ -423,9 +423,9 @@ foreach (
 
 
     $saveToProduct = (string)($posted_save_to_product[$postedIndex] ?? '') === '1';
-    if ($saveToProduct && !erpCan('products.add')) {
+    if ($saveToProduct && !erpCan('quotations.save_products_to_master')) {
         $productCheckStmt->close();
-        quoteFail('Only users with Product Master access can save quotation items to the catalog.');
+        quoteFail('Your account cannot save quotation items to Product Master.');
     }
 
     $rawProductId = trim((string)($posted_product_ids[$postedIndex] ?? ''));
