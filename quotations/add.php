@@ -881,48 +881,15 @@ $term_sets_json =
 
 <div class="card-body">
 
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
     <div>
-
-        <div class="quote-section-title">
-            Quotation Table
-        </div>
-
-        <div class="quote-section-note">
-            Columns are set by Super Admin. Use Template Change Request to request edits. Add item rows below. Quotation users can save manual items to Product Master with the row checkbox.
-        </div>
-
+        <div class="quote-section-title">Items</div>
+        <div class="quote-section-note">Enter the products and rates for this quotation.</div>
     </div>
-
-    <div class="d-flex gap-1 flex-wrap">
-
-        <button
-            type="button"
-            class="btn btn-outline-primary btn-sm"
-            id="addColumn"
-            disabled
-        >
-            Columns set by template
-        </button>
-
-        <button
-            type="button"
-            class="btn btn-primary btn-sm"
-            id="addRow"
-        >
-            + Row
-        </button>
-
-    </div>
-
+    <button type="button" class="btn btn-primary btn-sm" id="addRow">+ Add Item</button>
 </div>
 
-
-<div
-    id="columnConfigArea"
-    class="mb-2"
-></div>
+<div id="columnConfigArea" hidden aria-hidden="true"></div>
 
 
 <div class="table-responsive">
@@ -1324,131 +1291,13 @@ document.addEventListener(
         // =================================================
 
         function renderColumnConfig() {
-
             columnConfigArea.innerHTML = "";
-
-            columns.forEach(
-                function (column, index) {
-
-                    const box =
-                        document.createElement(
-                            "div"
-                        );
-
-                    box.className =
-                        "column-config";
-
-                    box.innerHTML = `
-                        <div class="column-config-grid">
-
-                            <div>
-                                <label class="quote-form-label">
-                                    Column ${index + 1}
-                                </label>
-
-                                <input
-                                    type="text"
-                                    name="column_label[]" disabled
-                                    class="form-control form-control-sm column-label-input"
-                                    data-index="${index}"
-                                    value="${escapeHtml(column.label)}"
-                                    required
-                                >
-                            </div>
-
-                            <div>
-                                <label class="quote-form-label">
-                                    Unit
-                                </label>
-
-                                <input
-                                    type="text"
-                                    name="column_unit[]" disabled
-                                    class="form-control form-control-sm column-unit-input"
-                                    data-index="${index}"
-                                    value="${escapeHtml(column.unit)}"
-                                    placeholder="kg / currency unit"
-                                >
-                            </div>
-
-                            <div>
-                                <label class="quote-form-label">
-                                    Type
-                                </label>
-
-                                <select
-                                    name="column_type[]" disabled
-                                    class="form-select form-select-sm column-type-input"
-                                    data-index="${index}"
-                                >
-                                    <option value="text" ${column.type === "text" ? "selected" : ""}>
-                                        Text
-                                    </option>
-
-                                    <option value="number" ${column.type === "number" ? "selected" : ""}>
-                                        Number
-                                    </option>
-
-                                    <option value="currency" ${column.type === "currency" ? "selected" : ""}>
-                                        Currency
-                                    </option>
-
-                                    <option value="textarea" ${column.type === "textarea" ? "selected" : ""}>
-                                        Long Text
-                                    </option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="quote-form-label">
-                                    Align
-                                </label>
-
-                                <select
-                                    name="column_align[]" disabled
-                                    class="form-select form-select-sm column-align-input"
-                                    data-index="${index}"
-                                >
-                                    <option value="left" ${column.align === "left" ? "selected" : ""}>
-                                        Left
-                                    </option>
-
-                                    <option value="center" ${column.align === "center" ? "selected" : ""}>
-                                        Center
-                                    </option>
-
-                                    <option value="right" ${column.align === "right" ? "selected" : ""}>
-                                        Right
-                                    </option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <span
-                                    class="small text-muted"
-                                    title="Template columns are managed by Super Admin"
-                                >
-                                    Fixed
-                                </span>
-                            </div>
-
-                        </div>
-                    `;
-
-                    columnConfigArea.appendChild(
-                        box
-                    );
-                }
-            );
-
-            bindColumnConfigEvents();
-
             renderQuotationTable();
         }
 
 
         // =================================================
-        // COLUMN CONFIG EVENTS
+                // COLUMN CONFIG EVENTS
         // =================================================
 
         function bindColumnConfigEvents() {
@@ -2025,33 +1874,8 @@ document.addEventListener(
 
 
         // =================================================
-        // ADD COLUMN
         // =================================================
-
-        document
-            .getElementById(
-                "addColumn"
-            )
-            .addEventListener(
-                "click",
-                function () {
-
-                    columns.push(
-                        {
-                            label: "New Column",
-                            unit: "",
-                            type: "text",
-                            align: "left"
-                        }
-                    );
-
-                    renderColumnConfig();
-                }
-            );
-
-
-        // =================================================
-        // ADD ROW
+                // ADD ROW
         // =================================================
 
         document
