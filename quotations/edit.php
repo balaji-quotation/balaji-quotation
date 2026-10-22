@@ -900,7 +900,6 @@ foreach ($statuses as $status) {
     <button type="button" class="btn btn-primary btn-sm" id="addRowBtn">+ Add Item</button>
 </div>
 
-<div id="columnConfig" hidden aria-hidden="true"></div>
 
 
 <div class="table-responsive">
@@ -1334,11 +1333,6 @@ document.addEventListener(
         // ELEMENTS
         // =================================================
 
-        const columnConfig =
-            document.getElementById(
-                "columnConfig"
-            );
-
         const quotationHead =
             document.getElementById(
                 "quotationHead"
@@ -1394,11 +1388,6 @@ document.addEventListener(
         // =================================================
         // COLUMN EDITOR
         // =================================================
-
-        function renderColumnEditors() {
-            columnConfig.innerHTML = "";
-        }
-
 
                 // =================================================
         // TABLE HEADER
@@ -1665,7 +1654,6 @@ document.addEventListener(
 
 
         function renderAll() {
-            renderColumnEditors();
             renderTable();
         }
 
