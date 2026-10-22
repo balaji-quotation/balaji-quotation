@@ -889,7 +889,6 @@ $term_sets_json =
     <button type="button" class="btn btn-primary btn-sm" id="addRow">+ Add Item</button>
 </div>
 
-<div id="columnConfigArea" hidden aria-hidden="true"></div>
 
 
 <div class="table-responsive">
@@ -1238,11 +1237,6 @@ document.addEventListener(
         // DOM
         // =================================================
 
-        const columnConfigArea =
-            document.getElementById(
-                "columnConfigArea"
-            );
-
         const quotationColumns =
             document.getElementById(
                 "quotationColumns"
@@ -1291,7 +1285,6 @@ document.addEventListener(
         // =================================================
 
         function renderColumnConfig() {
-            columnConfigArea.innerHTML = "";
             renderQuotationTable();
         }
 
@@ -1300,149 +1293,6 @@ document.addEventListener(
                 // COLUMN CONFIG EVENTS
         // =================================================
 
-        function bindColumnConfigEvents() {
-
-            document
-                .querySelectorAll(
-                    ".column-label-input"
-                )
-                .forEach(
-                    function (input) {
-
-                        input.addEventListener(
-                            "input",
-                            function () {
-
-                                const index =
-                                    Number(
-                                        this.dataset.index
-                                    );
-
-                                columns[index].label =
-                                    this.value;
-
-                                renderQuotationHeader();
-                            }
-                        );
-                    }
-                );
-
-
-            document
-                .querySelectorAll(
-                    ".column-unit-input"
-                )
-                .forEach(
-                    function (input) {
-
-                        input.addEventListener(
-                            "input",
-                            function () {
-
-                                const index =
-                                    Number(
-                                        this.dataset.index
-                                    );
-
-                                columns[index].unit =
-                                    this.value;
-
-                                renderQuotationHeader();
-                            }
-                        );
-                    }
-                );
-
-
-            document
-                .querySelectorAll(
-                    ".column-type-input"
-                )
-                .forEach(
-                    function (input) {
-
-                        input.addEventListener(
-                            "change",
-                            function () {
-
-                                const index =
-                                    Number(
-                                        this.dataset.index
-                                    );
-
-                                columns[index].type =
-                                    this.value;
-                            }
-                        );
-                    }
-                );
-
-
-            document
-                .querySelectorAll(
-                    ".column-align-input"
-                )
-                .forEach(
-                    function (input) {
-
-                        input.addEventListener(
-                            "change",
-                            function () {
-
-                                const index =
-                                    Number(
-                                        this.dataset.index
-                                    );
-
-                                columns[index].align =
-                                    this.value;
-
-                                renderQuotationHeader();
-                            }
-                        );
-                    }
-                );
-
-
-            document
-                .querySelectorAll(
-                    ".remove-column"
-                )
-                .forEach(
-                    function (button) {
-
-                        button.addEventListener(
-                            "click",
-                            function () {
-
-                                if (
-                                    columns.length <= 1
-                                ) {
-                                    alert(
-                                        "At least one quotation column is required."
-                                    );
-                                    return;
-                                }
-
-                                const index =
-                                    Number(
-                                        this.dataset.index
-                                    );
-
-                                columns.splice(
-                                    index,
-                                    1
-                                );
-
-                                renderColumnConfig();
-                            }
-                        );
-                    }
-                );
-        }
-
-
-        // =================================================
         // RENDER QUOTATION HEADER
         // =================================================
 
