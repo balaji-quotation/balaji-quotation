@@ -26,7 +26,8 @@ catch (InvalidArgumentException $e) { header('Location: edit.php?id=' . $id . '&
 $rate = $rateInput === '' ? 0.0 : (float)$rateInput;
 $customJson = json_encode($custom, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 $update = $conn->prepare('UPDATE products SET product_name = ?, description = ?, default_rate = ?, custom_fields_json = ? WHERE id = ? AND company_id = ?');
-$update->execute([$name, $description, $rate, $customJson, $id, $companyId]);
+$update->bind_param('ssdsii', $name, $description, $rate, $customJson, $id, $companyId);
+$update->execute();
 $update->close();
 header('Location: index.php?msg=updated');
 exit;
