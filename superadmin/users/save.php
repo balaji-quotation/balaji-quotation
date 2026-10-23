@@ -35,7 +35,19 @@ $hash = password_hash($password, PASSWORD_DEFAULT);
 if ($hash === false) adminUserFail('Password could not be secured.');
 $stmt = $conn->prepare("INSERT INTO users (name, email, password, role, status, company_id, assigned_template_version_id) VALUES (?, ?, ?, ?, 'Active', ?, ?)");
 $stmt->bind_param('ssssii', $name, $email, $hash, $role, $companyId, $templateVersionId);
-$stmt->execute(); $stmt->close();
+require_once __DIR__ . '/../../includes/user_permissions.php';
+try {
+    $conn->begin_transaction();
+    $stmt->execute();
+    $newUserId = (int)$conn->insert_id;
+    $stmt->close();
+    erpSaveUserPermissionOverrides($conn, $newUserId, $_POST['permissions'] ?? []);
+    $conn->commit();
+} catch (Throwable $e) {
+    $conn->rollback();
+    error_log('Company user creation failed: ' . $e->getMessage());
+    adminUserFail('User could not be created with these access settings. Run the user-permissions migration, then try again.');
+}
 $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 header('Location: index.php?created=1');
 exit;
