@@ -9,8 +9,9 @@ if (!$id || $id < 1) { header('Location: index.php'); exit; }
 $stmt = $conn->prepare("SELECT id, company_id, name, email, role, status, assigned_template_version_id FROM users WHERE id = ? AND company_id IS NOT NULL LIMIT 1");
 $stmt->bind_param('i', $id); $stmt->execute(); $user = $stmt->get_result()->fetch_assoc(); $stmt->close();
 if (!$user) { header('Location: index.php'); exit; }
-$templateQuery = $conn->prepare("SELECT t.template_name, v.id AS version_id, v.version_number, v.config_json FROM quotation_templates t JOIN quotation_template_versions v ON v.template_id=t.id WHERE t.company_id = ? AND t.is_active=1 AND v.version_number=(SELECT MAX(v2.version_number) FROM quotation_template_versions v2 WHERE v2.template_id=t.id) ORDER BY t.template_name");
-$templateQuery->bind_param('i', $user['company_id']);
+$templateQuery = $conn->prepare("SELECT t.template_name, v.id AS version_id, v.version_number, v.config_json FROM quotation_templates t JOIN quotation_template_versions v ON v.template_id=t.id WHERE t.company_id = ? AND ((t.is_active=1 AND v.version_number=(SELECT MAX(v2.version_number) FROM quotation_template_versions v2 WHERE v2.template_id=t.id)) OR v.id = ?) ORDER BY t.template_name, v.version_number DESC");
+$assignedTemplateVersionId = (int)($user['assigned_template_version_id'] ?? 0);
+$templateQuery->bind_param('ii', $user['company_id'], $assignedTemplateVersionId);
 $templateQuery->execute();
 $templates = $templateQuery->get_result();
 $templateQuery->close();
