@@ -12,8 +12,8 @@ $config = [
         ['label'=>'Part No. / Drawing No.','unit'=>'','type'=>'text','align'=>'left'],
         ['label'=>'Description','unit'=>'','type'=>'text','align'=>'left'],
         ['label'=>'Material / Grade','unit'=>'','type'=>'text','align'=>'left'],
-        ['label'=>'Qty / EAU','unit'=>'','type'=>'number','align'=>'right'],
-        ['label'=>'Rate','unit'=>'INR/PCS','type'=>'currency','align'=>'right']
+        ['label'=>'Qty / EAU','unit'=>'','type'=>'number','align'=>'right','field_role'=>'qty'],
+        ['label'=>'Rate','unit'=>'INR/PCS','type'=>'currency','align'=>'right','field_role'=>'rate']
     ],
     'commercial_terms' => [],
     'general_terms' => [],
@@ -76,7 +76,7 @@ $err = $_SESSION['template_error'] ?? ''; unset($_SESSION['template_error']);
                 <div id="templateColumnBuilder" class="vstack gap-2"></div>
                 <textarea class="d-none" name="columns_json" id="columnsJson" required><?= templateEditEscape(json_encode($config['columns'], JSON_UNESCAPED_UNICODE)) ?></textarea>
                 <div id="columnBuilderError" class="small text-danger mt-1"></div>
-                <small class="text-muted">For automatic totals, use Qty/Quantity and Rate/Price columns, or an Amount column. Existing quotations keep their saved template version.</small>
+                <small class="text-muted">Set Quantity and Rate roles for automatic calculations. Add an Auto Amount field to show each calculated line total. Existing quotations keep their saved template version.</small>
             </div>
             <div class="col-md-6 mb-3"><label class="form-label">Default commercial terms (JSON array)</label><textarea class="form-control font-monospace" name="commercial_terms_json" rows="8" required><?= templateEditEscape(json_encode($config['commercial_terms'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) ?></textarea></div>
             <div class="col-md-6 mb-3"><label class="form-label">Default general terms (JSON array of strings)</label><textarea class="form-control font-monospace" name="general_terms_json" rows="8" required><?= templateEditEscape(json_encode($config['general_terms'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) ?></textarea></div>
@@ -106,7 +106,8 @@ document.addEventListener('DOMContentLoaded', function () {
         return {
             label: String(column.label || ''),
             unit: String(column.unit || ''),
-            type: ['text', 'number', 'currency', 'textarea'].includes(column.type) ? column.type : 'text',
+            type: ['text', 'number', 'currency', 'textarea', 'auto_amount'].includes(column.type) ? column.type : 'text',
+            field_role: ['none', 'qty', 'rate', 'amount', 'auto_amount'].includes(column.field_role) ? column.field_role : 'none',
             align: ['left', 'center', 'right'].includes(column.align) ? column.align : 'left'
         };
     }) : [];
@@ -119,12 +120,16 @@ document.addEventListener('DOMContentLoaded', function () {
             row.innerHTML =
                 '<div class="col-lg-4 col-md-12"><label class="form-label small">Field name</label><input class="form-control form-control-sm js-field-label" maxlength="100" required></div>' +
                 '<div class="col-lg-2 col-md-4"><label class="form-label small">Unit (optional)</label><input class="form-control form-control-sm js-field-unit" maxlength="30" placeholder="kg, PCS, ₹/PCS"></div>' +
-                '<div class="col-lg-2 col-md-3"><label class="form-label small">Input type</label><select class="form-select form-select-sm js-field-type"><option value="text">Text</option><option value="number">Number</option><option value="currency">Price / Currency</option><option value="textarea">Long text</option></select></div>' +
+                '<div class="col-lg-2 col-md-3"><label class="form-label small">Input type</label><select class="form-select form-select-sm js-field-type"><option value="text">Text</option><option value="number">Number</option><option value="currency">Price / Currency</option><option value="textarea">Long text</option><option value="auto_amount">Auto Amount</option></select></div>' +
+                '<div class="col-lg-2 col-md-3"><label class="form-label small">Calculation role</label><select class="form-select form-select-sm js-field-role"><option value="none">Normal field</option><option value="qty">Quantity</option><option value="rate">Rate</option><option value="amount">Manual Amount</option><option value="auto_amount">Auto Amount</option></select></div>' +
                 '<div class="col-lg-2 col-md-3"><label class="form-label small">Alignment</label><select class="form-select form-select-sm js-field-align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>' +
                 '<div class="col-lg-2 col-md-2"><button type="button" class="btn btn-outline-danger btn-sm w-100 js-remove-field">Remove</button></div>';
             row.querySelector('.js-field-label').value = column.label;
             row.querySelector('.js-field-unit').value = column.unit;
             row.querySelector('.js-field-type').value = column.type;
+            row.querySelector('.js-field-role').value = column.field_role;
+            row.querySelector('.js-field-type').addEventListener('change', function () { if (this.value === 'auto_amount') row.querySelector('.js-field-role').value = 'auto_amount'; else if (row.querySelector('.js-field-role').value === 'auto_amount') row.querySelector('.js-field-role').value = 'none'; });
+            row.querySelector('.js-field-role').addEventListener('change', function () { const type = row.querySelector('.js-field-type'); if (this.value === 'auto_amount') type.value = 'auto_amount'; else if (type.value === 'auto_amount') type.value = 'number'; });
             row.querySelector('.js-field-align').value = column.align;
             row.querySelector('.js-remove-field').addEventListener('click', function () {
                 columns.splice(index, 1);
@@ -140,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         error.textContent = '';
-        columns.push({label: '', unit: '', type: 'text', align: 'left'});
+        columns.push({label: '', unit: '', type: 'text', field_role: 'none', align: 'left'});
         render();
         builder.lastElementChild.querySelector('.js-field-label').focus();
     });
@@ -153,6 +158,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 label: row.querySelector('.js-field-label').value.trim(),
                 unit: row.querySelector('.js-field-unit').value.trim(),
                 type: row.querySelector('.js-field-type').value,
+                field_role: row.querySelector('.js-field-role').value,
                 align: row.querySelector('.js-field-align').value
             };
         });
