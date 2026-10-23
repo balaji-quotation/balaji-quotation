@@ -19,7 +19,7 @@ $templateVersionId = filter_var($_POST['template_version_id'] ?? null, FILTER_VA
 $password = (string)($_POST['password'] ?? '');
 $roles = ['Administrator','Manager','Production','Quality','Dispatch','Accounts','User'];
 if ($id < 1 || $name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !in_array($role, $roles, true) || !in_array($status, ['Active','Inactive'], true) || !$templateVersionId || $templateVersionId < 1) adminEditFail('Check the user details and template assignment.', $id);
-$check = $conn->prepare('SELECT company_id, status FROM users WHERE id = ? AND company_id IS NOT NULL LIMIT 1');
+$check = $conn->prepare('SELECT company_id, status, assigned_template_version_id FROM users WHERE id = ? AND company_id IS NOT NULL LIMIT 1');
 $check->bind_param('i', $id); $check->execute(); $existing = $check->get_result()->fetch_assoc(); $check->close();
 if (!$existing) adminEditFail('Company user not found.', $id);
 $companyId = (int)$existing['company_id'];
@@ -53,6 +53,21 @@ try {
     $stmt->execute();
     $stmt->close();
     erpSaveUserPermissionOverrides($conn, $id, $_POST['permissions'] ?? []);
+    $userTemplateVersionId = erpCreateUserQuotationTemplate(
+        $conn,
+        $companyId,
+        $id,
+        $name,
+        (int)$_SESSION['user_id'],
+        (int)$templateVersionId,
+        (int)($existing['assigned_template_version_id'] ?? 0),
+        $_POST['quotation_fields'] ?? [],
+        (string)($_POST['print_layout'] ?? '')
+    );
+    $assign = $conn->prepare('UPDATE users SET assigned_template_version_id = ? WHERE id = ? AND company_id = ?');
+    $assign->bind_param('iii', $userTemplateVersionId, $id, $companyId);
+    $assign->execute();
+    $assign->close();
     $conn->commit();
 } catch (Throwable $e) {
     $conn->rollback();
