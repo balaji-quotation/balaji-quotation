@@ -96,14 +96,28 @@ while (
 
 $products = [];
 
-$productDescriptionSelect = productMasterColumnExists($conn, 'description') ? ', description' : '';
+$catalogColumns = [];
+foreach (['description', 'part_number', 'drawing_number', 'material', 'unit', 'custom_fields_json'] as $catalogColumn) {
+    if (productMasterColumnExists($conn, $catalogColumn)) {
+        $catalogColumns[] = $catalogColumn;
+    }
+}
+$productSelectColumns = $catalogColumns
+    ? ', ' . implode(', ', array_map(static fn($column) => '`' . $column . '`', $catalogColumns))
+    : '';
+$productMasterFieldMap = array_map(
+    static fn($field) => [
+        'key' => (string)$field['field_key'],
+        'label' => (string)$field['label'],
+    ],
+    productMasterFieldDefinitions($conn)
+);
 $product_sql = "
     SELECT
         id,
         product_code,
-        product_name" . $productDescriptionSelect . ",
-        part_number,
-        default_rate
+        product_name,
+        default_rate" . $productSelectColumns . "
     FROM products
     WHERE company_id = $companyId
     ORDER BY product_name ASC
@@ -128,6 +142,8 @@ while (
         $product_result
     )
 ) {
+    $product['custom_fields'] = productMasterDecodeValues($product['custom_fields_json'] ?? null);
+    unset($product['custom_fields_json']);
     $products[] = $product;
 }
 
@@ -1219,6 +1235,7 @@ document.addEventListener(
 
         const defaultColumns = <?= json_encode($templateConfig['columns'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
         const productCatalog = <?= json_encode($products, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        const productMasterFieldMap = <?= json_encode($productMasterFieldMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
         const canSaveProducts = <?= erpCan('quotations.save_products_to_master') ? 'true' : 'false'; ?>;
         let columns = Array.isArray(defaultColumns) && defaultColumns.length
             ? defaultColumns
@@ -1362,20 +1379,40 @@ document.addEventListener(
             });
             if (!product) return {};
 
+            const normalize = function (value) {
+                return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+            };
+            const customValues = product.custom_fields && typeof product.custom_fields === "object"
+                ? product.custom_fields
+                : {};
             const values = {};
+
             columns.forEach(function (column, index) {
-                const label = String(column.label || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+                const label = normalize(column.label);
                 let value = null;
 
-                if (/^(productcode|itemcode|code|sku)$/.test(label)) {
-                    value = product.product_code || "";
-                } else if (/^(partnumber|partno|part)$/.test(label)) {
-                    value = product.part_number || "";
+                const customField = productMasterFieldMap.find(function (field) {
+                    return normalize(field.label) === label || normalize(field.key) === label;
+                });
+                if (customField && Object.prototype.hasOwnProperty.call(customValues, customField.key)) {
+                    value = customValues[customField.key];
                 } else if (/^(rate|price|unitrate|unitprice|rateperunit|priceperunit)$/.test(label)) {
                     value = product.default_rate ?? "";
+                } else if (label.includes("part") && label.includes("drawing")) {
+                    value = [product.part_number, product.drawing_number].filter(Boolean).join(" / ");
+                } else if (label.includes("drawing") && /(no|number|reference|code)/.test(label)) {
+                    value = product.drawing_number || "";
+                } else if (label.includes("part") && /(no|number|reference|code)/.test(label)) {
+                    value = product.part_number || "";
+                } else if (/^(material|materialgrade|grade|materialgrademre)$/.test(label) || label.includes("material") || label.includes("grade")) {
+                    value = product.material || "";
                 } else if (/^(description|productdescription|itemdescription|details)$/.test(label)) {
                     value = product.description || product.product_name || "";
-                } else if (/product|item|material|particular/.test(label)) {
+                } else if (/^(productcode|itemcode|code|sku)$/.test(label)) {
+                    value = product.product_code || "";
+                } else if (/^(unit|uom|unitofmeasure)$/.test(label)) {
+                    value = product.unit || "";
+                } else if (/product|item|particular/.test(label)) {
                     value = product.product_name || "";
                 }
 
