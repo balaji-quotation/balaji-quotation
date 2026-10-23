@@ -492,6 +492,11 @@ foreach (
 
 
     // Recompute server-side automatic line amount; do not trust posted calculated cells.
+    foreach ($columns as $column) {
+        if (($column['field_role'] ?? '') === 'auto_amount' || ($column['data_type'] ?? '') === 'auto_amount') {
+            $row_json_data[$column['column_key']] = '';
+        }
+    }
     $calculation = is_array($templateConfig['calculation'] ?? null) ? $templateConfig['calculation'] : ['mode'=>'standard','formula'=>''];
     $computedAmount = quotationTemplateRowAmount($row_json_data, $columns, $calculation);
     if ($computedAmount !== null && is_finite($computedAmount)) {
