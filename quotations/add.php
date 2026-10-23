@@ -1331,11 +1331,12 @@ document.addEventListener(
         function amountColumnRole(column) {
             const label = String(column.label || column.column_label || "")
                 .toLowerCase()
+                .replace(/\([^)]*\)/g, " ")
                 .replace(/[^\p{L}\p{N}]+/gu, " ")
                 .trim();
-            if (/^(qty|quantity|ea|eau|qty eau|quantity eau)$/.test(label)) return "qty";
-            if (/^(rate|unit rate|price|unit price|unit cost)$/.test(label)) return "rate";
-            if (/^(amount|line amount|total amount|line total)$/.test(label)) return "amount";
+            if (/^(qty|quantity|ea|eau)(?:\s|$)/.test(label)) return "qty";
+            if (/^(unit rate|rate|unit price|price|unit cost)(?:\s|$)/.test(label)) return "rate";
+            if (/^(line amount|total amount|line total|amount)(?:\s|$)/.test(label)) return "amount";
             return null;
         }
 
