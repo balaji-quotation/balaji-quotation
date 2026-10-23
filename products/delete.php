@@ -108,6 +108,28 @@ if (!$product) {
 }
 
 
+// Preserve issued quotation snapshots and product references.
+$quotation_stmt = mysqli_prepare(
+    $conn,
+    "SELECT COUNT(*) AS total FROM quotation_rows WHERE product_id = ?"
+);
+if (!$quotation_stmt) {
+    error_log("Product quotation check prepare error: " . mysqli_error($conn));
+    header("Location: index.php?msg=db_error");
+    exit;
+}
+mysqli_stmt_bind_param($quotation_stmt, "i", $id);
+mysqli_stmt_execute($quotation_stmt);
+$quotation_result = mysqli_stmt_get_result($quotation_stmt);
+$quotation_row = mysqli_fetch_assoc($quotation_result);
+mysqli_stmt_close($quotation_stmt);
+$quotation_count = (int)($quotation_row['total'] ?? 0);
+if ($quotation_count > 0) {
+    header("Location: index.php?msg=quotation_linked&count=" . $quotation_count);
+    exit;
+}
+
+
 // =====================================================
 // CHECK PRODUCT OPERATIONS
 // =====================================================
