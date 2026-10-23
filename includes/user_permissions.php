@@ -90,6 +90,156 @@ function erpUserPermissionSelection(mysqli $db, int $userId, string $role): arra
 }
 
 /**
+ * Create or update the private quotation template assigned to one user.
+ * Selected fields are indexes from a trusted company template version; the
+ * submitted config itself is never trusted.
+ */
+function erpCreateUserQuotationTemplate(
+    mysqli $db,
+    int $companyId,
+    int $userId,
+    string $userName,
+    int $adminId,
+    int $sourceVersionId,
+    int $currentVersionId,
+    $submittedIndexes,
+    string $layout
+): int {
+    require_once __DIR__ . '/quotation_template_runtime.php';
+
+    $allowedLayouts = ['Classic', 'Compact', 'Minimal', 'Modern'];
+    if (!in_array($layout, $allowedLayouts, true)) {
+        throw new RuntimeException('Choose a valid quotation print design.');
+    }
+    if (!is_array($submittedIndexes)) {
+        throw new RuntimeException('Choose at least one quotation field.');
+    }
+
+    $source = $db->prepare(
+        'SELECT v.id, v.template_id, v.config_json, t.template_name, t.description
+         FROM quotation_template_versions v
+         JOIN quotation_templates t ON t.id = v.template_id
+         WHERE v.id = ? AND t.company_id = ? AND t.is_active = 1
+         LIMIT 1'
+    );
+    $source->bind_param('ii', $sourceVersionId, $companyId);
+    $source->execute();
+    $base = $source->get_result()->fetch_assoc();
+    $source->close();
+    if (!$base) {
+        throw new RuntimeException('Choose an active quotation template for this company.');
+    }
+
+    $config = json_decode((string)$base['config_json'], true);
+    if (!is_array($config) || !is_array($config['columns'] ?? null)) {
+        throw new RuntimeException('The selected quotation template is invalid.');
+    }
+
+    $selected = [];
+    foreach ($submittedIndexes as $rawIndex) {
+        $index = filter_var($rawIndex, FILTER_VALIDATE_INT);
+        if ($index === false || $index < 0 || !array_key_exists($index, $config['columns'])) {
+            throw new RuntimeException('One or more quotation fields are invalid.');
+        }
+        $selected[$index] = true;
+    }
+    $columns = [];
+    foreach (array_values($config['columns']) as $index => $column) {
+        if (isset($selected[$index])) {
+            $columns[] = $column;
+        }
+    }
+    if (!$columns || count($columns) > 20) {
+        throw new RuntimeException('Choose between 1 and 20 quotation fields.');
+    }
+    $config['columns'] = $columns;
+    $config['print_layout'] = $layout;
+
+    $hasQty = false;
+    $hasRate = false;
+    $hasAmount = false;
+    foreach ($columns as $column) {
+        if (!is_array($column)) continue;
+        $role = quotationTemplateColumnRole($column);
+        if ($role === 'qty') $hasQty = true;
+        if ($role === 'rate') $hasRate = true;
+        if ($role === 'amount') $hasAmount = true;
+    }
+    $totals = is_array($config['totals'] ?? null) ? $config['totals'] : [];
+    $tax = is_array($config['tax'] ?? null) ? $config['tax'] : [];
+    $amountNeeded = !empty($tax['gst_enabled'])
+        || !empty($totals['show_line_amount'])
+        || !empty($totals['show_subtotal'])
+        || !empty($totals['show_tax'])
+        || !empty($totals['show_grand_total']);
+    $calculation = is_array($config['calculation'] ?? null) ? $config['calculation'] : [];
+    $mode = (string)($calculation['mode'] ?? 'standard');
+    $formula = (string)($calculation['formula'] ?? '');
+    if ($mode === 'standard' && $amountNeeded && !$hasAmount && !($hasQty && $hasRate)) {
+        throw new RuntimeException('Keep the Qty and Rate fields, or an Amount field, because this template calculates totals.');
+    }
+    if ($mode === 'custom') {
+        if (preg_match('/\\b(qty|quantity)\\b/i', $formula) && !$hasQty) {
+            throw new RuntimeException('Keep the Qty field because the template formula uses it.');
+        }
+        if (preg_match('/\\b(rate|price)\\b/i', $formula) && !$hasRate) {
+            throw new RuntimeException('Keep the Rate field because the template formula uses it.');
+        }
+        if (preg_match('/\\bamount\\b/i', $formula) && !$hasAmount && !($hasQty && $hasRate)) {
+            throw new RuntimeException('Keep the Amount field or both Qty and Rate fields because the template formula uses them.');
+        }
+    }
+
+    $configJson = json_encode($config, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($configJson === false) {
+        throw new RuntimeException('Quotation settings could not be saved.');
+    }
+
+    $privateDescription = 'User-specific quotation template for user ID ' . $userId;
+    $sameAssignedVersion = $sourceVersionId === $currentVersionId;
+    $isPrivateTemplate = trim((string)($base['description'] ?? '')) === $privateDescription;
+    $originalConfig = json_decode((string)$base['config_json'], true);
+    if ($sameAssignedVersion && $isPrivateTemplate && $originalConfig === $config) {
+        return $sourceVersionId;
+    }
+
+    if ($sameAssignedVersion && $isPrivateTemplate) {
+        $templateId = (int)$base['template_id'];
+        $versionQuery = $db->prepare(
+            'SELECT COALESCE(MAX(version_number), 0) + 1 AS next_version
+             FROM quotation_template_versions WHERE template_id = ?'
+        );
+        $versionQuery->bind_param('i', $templateId);
+        $versionQuery->execute();
+        $nextVersion = (int)($versionQuery->get_result()->fetch_assoc()['next_version'] ?? 1);
+        $versionQuery->close();
+    } else {
+        $templateName = mb_substr(trim($userName) . ' - ' . trim((string)$base['template_name']), 0, 150, 'UTF-8');
+        if ($templateName === '') $templateName = 'User quotation template';
+        $templateKey = 'usr-' . bin2hex(random_bytes(12));
+        $stmt = $db->prepare(
+            'INSERT INTO quotation_templates (company_id, template_key, template_name, description, is_active, created_by)
+             VALUES (?, ?, ?, ?, 1, ?)'
+        );
+        $stmt->bind_param('isssi', $companyId, $templateKey, $templateName, $privateDescription, $adminId);
+        $stmt->execute();
+        $templateId = (int)$db->insert_id;
+        $stmt->close();
+        $nextVersion = 1;
+    }
+
+    $insert = $db->prepare(
+        'INSERT INTO quotation_template_versions (template_id, version_number, config_json, created_by)
+         VALUES (?, ?, ?, ?)'
+    );
+    $insert->bind_param('iisi', $templateId, $nextVersion, $configJson, $adminId);
+    $insert->execute();
+    $versionId = (int)$db->insert_id;
+    $insert->close();
+    return $versionId;
+}
+
+/**
  * Persist both granted and denied choices so unchecked items do not inherit a
  * broad role permission.
  */
