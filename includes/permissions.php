@@ -265,11 +265,22 @@ function erpPermissionMap()
 
         'products.edit' => [
             'Administrator',
-            'Manager'
+            'Manager',
+            'Production',
+            'Quality',
+            'Dispatch',
+            'Accounts',
+            'User'
         ],
 
         'products.delete' => [
-            'Administrator'
+            'Administrator',
+            'Manager',
+            'Production',
+            'Quality',
+            'Dispatch',
+            'Accounts',
+            'User'
         ],
 
 
