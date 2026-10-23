@@ -547,12 +547,28 @@ $term_sets_json =
     box-shadow: 0 0 0 .18rem rgba(61, 130, 220, .13);
 }
 
+.quote-corporate-table .product-master-inline {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed #dce4ee;
+}
+
+.quote-corporate-table .product-master-inline-label {
+    margin-bottom: 4px;
+    color: #718096;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+}
+
 .quote-corporate-table .product-master-picker {
-    min-width: 240px;
-    min-height: 39px;
+    width: 100%;
+    min-width: 150px;
+    min-height: 36px;
     border-color: #d8e0ea;
     border-radius: 7px;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .quote-corporate-table .save-to-product-checkbox {
@@ -1598,9 +1614,9 @@ document.addEventListener(
             rows.forEach(function (row) {
                 const item = active.find(function (entry) { return entry.row === row; });
                 const amountCell = row.querySelector(".line-amount-value");
-                if (amountCell) amountCell.textContent = item && item.amount !== null ? formatLiveAmount(item.amount) : "";
+                if (amountCell) amountCell.textContent = formatLiveAmount(item && item.amount !== null ? item.amount : 0);
                 row.querySelectorAll("[data-auto-amount-index]").forEach(function (input) {
-                    const amountText = item && item.amount !== null ? formatLiveAmount(item.amount) : "";
+                    const amountText = formatLiveAmount(item && item.amount !== null ? item.amount : 0);
                     input.value = amountText === "" ? "" : String(item.amount);
                     const display = row.querySelector('[data-auto-amount-display="' + input.dataset.autoAmountIndex + '"]');
                     if (display) display.textContent = amountText;
@@ -1618,7 +1634,7 @@ document.addEventListener(
             if (showSubtotal) entries.push(["Subtotal", subtotal]);
             if (showTax) entries.push(["GST (" + taxRate + "%)", taxAmount]);
             if (showGrandTotal) entries.push(["Grand Total", grandTotal]);
-            const totalColumns = columns.length + 3 + (showLineAmount ? 1 : 0);
+            const totalColumns = columns.length + 2 + (showLineAmount ? 1 : 0);
             entries.forEach(function (entry) {
                 const tr = document.createElement("tr");
                 tr.className = "quotation-live-total";
@@ -1681,11 +1697,6 @@ document.addEventListener(
                 amountTh.textContent = "Amount";
                 quotationColumns.appendChild(amountTh);
             }
-
-            const productTh = document.createElement("th");
-            productTh.style.minWidth = "190px";
-            productTh.textContent = "Product Master (optional)";
-            quotationColumns.appendChild(productTh);
 
             const actionTh =
                 document.createElement(
@@ -1938,23 +1949,19 @@ document.addEventListener(
                     tr.appendChild(amountTd);
                 }
 
-                const productTd = document.createElement("td");
                 const productPicker = document.createElement("select");
                 productPicker.name = `product_id[${rowIndex}]`;
                 productPicker.className = "form-select form-select-sm product-master-picker";
 
                 const emptyProductOption = document.createElement("option");
                 emptyProductOption.value = "";
-                emptyProductOption.textContent = "Manual entry";
+                emptyProductOption.textContent = "Choose a saved product (optional)";
                 productPicker.appendChild(emptyProductOption);
 
                 productCatalog.forEach(function (product) {
                     const option = document.createElement("option");
                     option.value = String(product.id);
-                    const code = String(product.product_code || "").trim();
-                    const name = String(product.product_name || "").trim();
-                    const part = String(product.part_number || "").trim();
-                    option.textContent = [code, name, part].filter(Boolean).join(" · ");
+                    option.textContent = String(product.product_name || "").trim();
                     productPicker.appendChild(option);
                 });
 
@@ -1985,11 +1992,18 @@ document.addEventListener(
                     }
                     updateLiveAmounts();
                 });
-                productTd.appendChild(productPicker);
+
+                const productWrap = document.createElement("div");
+                productWrap.className = "product-master-inline";
+                const productLabel = document.createElement("div");
+                productLabel.className = "product-master-inline-label";
+                productLabel.textContent = "Saved product";
+                productWrap.appendChild(productLabel);
+                productWrap.appendChild(productPicker);
 
                 if (canSaveProducts) {
                     const saveProductLabel = document.createElement("label");
-                    saveProductLabel.className = "small text-muted d-flex align-items-center gap-1 mt-1";
+                    saveProductLabel.className = "small text-muted d-flex align-items-center gap-1 mt-2";
                     const saveProductCheckbox = document.createElement("input");
                     saveProductCheckbox.type = "checkbox";
                     saveProductCheckbox.name = `save_to_product[${rowIndex}]`;
@@ -2002,9 +2016,20 @@ document.addEventListener(
                     const saveProductText = document.createElement("span");
                     saveProductText.textContent = "Save manual item to Product Master";
                     saveProductLabel.appendChild(saveProductText);
-                    productTd.appendChild(saveProductLabel);
+                    productWrap.appendChild(saveProductLabel);
                 }
-                tr.appendChild(productTd);
+
+                const descriptionIndex = columns.findIndex(function (column) {
+                    const label = String(column.label || "").toLowerCase();
+                    return amountColumnRole(column) !== "auto_amount"
+                        && /description|product|item|particular|name/.test(label);
+                });
+                const firstVisibleIndex = columns.findIndex(function (column) {
+                    return amountColumnRole(column) !== "auto_amount";
+                });
+                const targetColumnIndex = descriptionIndex >= 0 ? descriptionIndex : Math.max(0, firstVisibleIndex);
+                const productCell = tr.children[targetColumnIndex + 1];
+                if (productCell) productCell.appendChild(productWrap);
 
                 const actionTd =
                     document.createElement(
