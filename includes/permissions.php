@@ -541,6 +541,18 @@ function erpCan($permission)
         return false;
     }
 
+    if (!erpIsSuperAdmin() && erpCurrentCompanyId() !== null) {
+        require_once __DIR__ . '/user_permissions.php';
+        $database = $GLOBALS['conn'] ?? null;
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        if ($database instanceof mysqli && $userId > 0) {
+            $overrides = erpLoadUserPermissionOverrides($database, $userId);
+            if (is_array($overrides) && array_key_exists($permission, $overrides)) {
+                return $overrides[$permission];
+            }
+        }
+    }
+
     return erpHasRole(
         $permissions[$permission]
     );
