@@ -154,9 +154,10 @@ while (
 
 $quotation_prefix =
     'UT/QTN/';
+$quotation_start_number = 1;
 
 $setting_sql = "
-    SELECT quotation_prefix
+    SELECT quotation_prefix, quotation_start_number
     FROM quotation_company_settings
     WHERE company_id = $companyId
     ORDER BY id ASC
@@ -196,6 +197,7 @@ if (
                 ]
             );
     }
+    $quotation_start_number = max(1, (int)($setting['quotation_start_number'] ?? 1));
 }
 
 
@@ -230,7 +232,8 @@ $next_serial = quotationNextSequence(
     $companyId,
     $quotation_prefix,
     $fy_text,
-    $year
+    $year,
+    $quotation_start_number
 );
 
 $suggested_quotation_no = quotationFormatNumber(
