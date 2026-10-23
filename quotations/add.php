@@ -888,6 +888,7 @@ $term_sets_json =
         <div class="quote-section-title">Items</div>
         <div class="quote-section-note">Enter the products and rates for this quotation.</div>
     </div>
+    <?php if (erpCan('products.view')): ?><a href="../products/index.php" class="btn btn-outline-primary btn-sm">Manage Product Master</a><?php endif; ?>
     <button type="button" class="btn btn-primary btn-sm" id="addRow">+ Add Item</button>
 </div>
 
