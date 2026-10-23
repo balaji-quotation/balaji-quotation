@@ -586,6 +586,51 @@ $term_sets_json =
     font-weight: 600;
 }
 
+.quote-section-title {
+    font-size: 16px;
+}
+
+.quote-section-note {
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.quote-form-label {
+    font-size: 12px;
+}
+
+.quote-corporate-table tbody td:first-child {
+    color: #526173;
+    font-weight: 700;
+}
+
+.quote-table-wrap::-webkit-scrollbar {
+    height: 9px;
+}
+
+.quote-table-wrap::-webkit-scrollbar-thumb {
+    background: #c8d3e0;
+    border-radius: 10px;
+}
+
+@media (max-width: 767.98px) {
+    .quote-items-actions {
+        width: 100%;
+    }
+
+    .quote-items-actions .btn {
+        flex: 1 1 auto;
+    }
+
+    .quote-builder-card .card-body {
+        padding: 14px;
+    }
+
+    .quote-corporate-table {
+        min-width: 850px;
+    }
+}
+
 .column-config {
     background: #f7f9fb;
     border: 1px solid #e7ebf0;
