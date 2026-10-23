@@ -76,9 +76,9 @@ $current_role = erpCurrentRole();
                 <?php if (erpCurrentCompanyId() !== null) { ?>
 
                 <li class="menu-title">WORKSPACE</li>
-                <li><a href="/quotation/client/dashboard.php" class="side-nav-link"><i class="ri-dashboard-2-line"></i><span>Dashboard</span></a></li>
-                <li><a href="/quotation/clients/index.php" class="side-nav-link"><i class="ri-contacts-line"></i><span>Customers</span></a></li>
-                <li><a href="/quotation/quotations/index.php" class="side-nav-link"><i class="ri-file-text-line"></i><span>Quotations</span></a></li>
+                <?php if (erpCan('dashboard.view')) { ?><li><a href="/quotation/client/dashboard.php" class="side-nav-link"><i class="ri-dashboard-2-line"></i><span>Dashboard</span></a></li><?php } ?>
+                <?php if (erpCan('clients.view')) { ?><li><a href="/quotation/clients/index.php" class="side-nav-link"><i class="ri-contacts-line"></i><span>Customers</span></a></li><?php } ?>
+                <?php if (erpCan('quotations.view')) { ?><li><a href="/quotation/quotations/index.php" class="side-nav-link"><i class="ri-file-text-line"></i><span>Quotations</span></a><?php if (erpCan('products.view')) { ?><div class="ps-4"><a href="/quotation/products/index.php" class="side-nav-link"><i class="ri-box-3-line"></i><span>Product Master</span></a></div><?php } ?></li><?php } ?>
                 <li><a href="/quotation/client/template_request.php" class="side-nav-link"><i class="ri-message-2-line"></i><span>Template Change Request</span></a></li>
                 <li><a href="/quotation/client/company_profile.php" class="side-nav-link"><i class="ri-building-line"></i><span>Company Profile</span></a></li>
                 <li><a href="/quotation/users/profile.php" class="side-nav-link"><i class="ri-user-line"></i><span>My Profile</span></a></li>
