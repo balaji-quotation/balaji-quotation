@@ -9,6 +9,7 @@ if (!isset($_SESSION['user_id'])) {
 
 include("../includes/db.php");
 require_once __DIR__ . '/../includes/permissions.php';
+require_once __DIR__ . '/../includes/quotation_template_runtime.php';
 erpRequireCompanyUser($conn);
 erpRequire('quotations.edit');
 $companyId = erpCurrentCompanyId();
@@ -363,7 +364,7 @@ if (!is_array($row_data)) $row_data = [];
 
 $sourceColumnStmt = mysqli_prepare(
     $conn,
-    "SELECT qc.column_key, qc.column_label, qc.unit_text, qc.data_type, qc.text_align
+    "SELECT qc.column_key, qc.column_label, qc.unit_text, qc.data_type, qc.text_align, q.template_config_snapshot
      FROM quotation_columns qc
      INNER JOIN quotations q ON q.id = qc.quotation_id
      WHERE q.id = ? AND q.company_id = ? AND q.created_by = ? AND qc.is_visible = 1
@@ -376,13 +377,23 @@ mysqli_stmt_bind_param($sourceColumnStmt, "iii", $quotation_id, $companyId, $use
 mysqli_stmt_execute($sourceColumnStmt);
 $sourceColumnResult = mysqli_stmt_get_result($sourceColumnStmt);
 $columns = [];
+$templateSnapshotConfig = null;
 while ($sourceColumn = mysqli_fetch_assoc($sourceColumnResult)) {
+    if ($templateSnapshotConfig === null) {
+        $decodedSnapshot = json_decode((string)($sourceColumn['template_config_snapshot'] ?? ''), true);
+        $templateSnapshotConfig = is_array($decodedSnapshot) ? $decodedSnapshot : [];
+    }
+    $columnIndex = count($columns);
+    $savedColumnConfig = is_array($templateSnapshotConfig['columns'][$columnIndex] ?? null) ? $templateSnapshotConfig['columns'][$columnIndex] : [];
     $columns[] = [
-        'original_index' => count($columns),
+        'original_index' => $columnIndex,
         'column_key' => (string)$sourceColumn['column_key'],
+        'column_label' => (string)$sourceColumn['column_label'],
         'label' => (string)$sourceColumn['column_label'],
         'unit' => (string)($sourceColumn['unit_text'] ?? ''),
-        'type' => in_array($sourceColumn['data_type'], ['text','number','currency','textarea'], true) ? $sourceColumn['data_type'] : 'text',
+        'data_type' => (string)($sourceColumn['data_type'] ?? 'text'),
+        'type' => $savedColumnConfig['type'] ?? (string)($sourceColumn['data_type'] ?? 'text'),
+        'field_role' => $savedColumnConfig['field_role'] ?? 'none',
         'align' => in_array($sourceColumn['text_align'], ['left','center','right'], true) ? $sourceColumn['text_align'] : 'left'
     ];
 }
@@ -437,8 +448,23 @@ foreach ($row_data as $row) {
 
 
     if ($has_value) {
-        $clean_rows[] =
-            $clean_row;
+        $rowByKey = [];
+        foreach ($columns as $index => $column) {
+            $rowByKey[$column['column_key']] = (string)($clean_row[$index] ?? '');
+        }
+        $calculation = is_array($templateSnapshotConfig['calculation'] ?? null) ? $templateSnapshotConfig['calculation'] : ['mode'=>'standard','formula'=>''];
+        $computedAmount = quotationTemplateRowAmount($rowByKey, $columns, $calculation);
+        if ($computedAmount !== null && is_finite($computedAmount)) {
+            $rounding = is_array($templateSnapshotConfig['rounding'] ?? null) ? $templateSnapshotConfig['rounding'] : [];
+            $places = max(0, min(4, (int)($rounding['decimal_places'] ?? 2)));
+            $formattedAmount = number_format(quotationTemplateRound($computedAmount, $places, (string)($rounding['mode'] ?? 'half_up')), $places, '.', '');
+            foreach ($columns as $index => $column) {
+                if (($column['field_role'] ?? '') === 'auto_amount' || ($column['type'] ?? '') === 'auto_amount') {
+                    $clean_row[$index] = $formattedAmount;
+                }
+            }
+        }
+        $clean_rows[] = $clean_row;
     }
 }
 
