@@ -17,7 +17,8 @@ function syncQuotationCompanySettings(
     string $city,
     string $state,
     string $pincode,
-    string $quotationNumberFormat
+    string $quotationNumberFormat,
+    int $quotationStartingNumber = 1
 ): void {
     $addressParts = [$billingAddress, $city, $state, $pincode];
     $addressParts = array_values(array_filter($addressParts, static function ($part): bool {
@@ -39,17 +40,18 @@ function syncQuotationCompanySettings(
         $update = $db->prepare(
             "UPDATE quotation_company_settings
              SET company_name = ?, company_address = NULLIF(?, ''), gst_no = NULLIF(?, ''),
-                 phone = NULLIF(?, ''), email = NULLIF(?, ''), quotation_prefix = ?
+                 phone = NULLIF(?, ''), email = NULLIF(?, ''), quotation_prefix = ?, quotation_start_number = ?
              WHERE id = ? LIMIT 1"
         );
         $update->bind_param(
-            'ssssssi',
+            'ssssssii',
             $companyName,
             $printAddress,
             $gstin,
             $printPhone,
             $contactEmail,
             $quotationNumberFormat,
+            $quotationStartingNumber,
             $settingsId
         );
         $update->execute();
@@ -59,18 +61,19 @@ function syncQuotationCompanySettings(
 
     $insert = $db->prepare(
         "INSERT INTO quotation_company_settings
-            (company_id, company_name, company_address, gst_no, phone, email, quotation_prefix)
-         VALUES (?, ?, NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), ?)"
+            (company_id, company_name, company_address, gst_no, phone, email, quotation_prefix, quotation_start_number)
+         VALUES (?, ?, NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), ?, ?)"
     );
     $insert->bind_param(
-        'issssss',
+        'issssssi',
         $companyId,
         $companyName,
         $printAddress,
         $gstin,
         $printPhone,
         $contactEmail,
-        $quotationNumberFormat
+        $quotationNumberFormat,
+        $quotationStartingNumber
     );
     $insert->execute();
     $insert->close();
