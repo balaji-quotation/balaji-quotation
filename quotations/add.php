@@ -1470,10 +1470,15 @@ document.addEventListener(
             });
 
             rows.forEach(function (row) {
-                const amountCell = row.querySelector(".line-amount-value");
-                if (!amountCell) return;
                 const item = active.find(function (entry) { return entry.row === row; });
-                amountCell.textContent = item && item.amount !== null ? formatLiveAmount(item.amount) : "";
+                const amountCell = row.querySelector(".line-amount-value");
+                if (amountCell) amountCell.textContent = item && item.amount !== null ? formatLiveAmount(item.amount) : "";
+                row.querySelectorAll("[data-auto-amount-index]").forEach(function (input) {
+                    const amountText = item && item.amount !== null ? formatLiveAmount(item.amount) : "";
+                    input.value = amountText === "" ? "" : String(item.amount);
+                    const display = row.querySelector('[data-auto-amount-display="' + input.dataset.autoAmountIndex + '"]');
+                    if (display) display.textContent = amountText;
+                });
             });
 
             if (!totalsFoot) return;
@@ -1782,9 +1787,18 @@ document.addEventListener(
                         }
 
 
-                        td.appendChild(
-                            input
-                        );
+                        if (amountColumnRole(column) === "auto_amount") {
+                            input.type = "hidden";
+                            input.dataset.autoAmountIndex = String(columnIndex);
+                            const display = document.createElement("span");
+                            display.className = "text-end d-block fw-semibold";
+                            display.dataset.autoAmountDisplay = String(columnIndex);
+                            display.textContent = "";
+                            td.appendChild(input);
+                            td.appendChild(display);
+                        } else {
+                            td.appendChild(input);
+                        }
 
                         tr.appendChild(
                             td
