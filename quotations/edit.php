@@ -1400,10 +1400,6 @@ document.addEventListener(
 
 
 
-        const calculationConfig = <?= json_encode($calculationConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-        const roundingConfig = <?= json_encode($roundingConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-        const taxConfig = <?= json_encode($taxConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-        const totalsConfig = <?= json_encode($totalsConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
         const showLineAmount = Object.prototype.hasOwnProperty.call(totalsConfig, "show_line_amount")
             ? !!totalsConfig.show_line_amount
             : true;
