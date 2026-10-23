@@ -23,15 +23,16 @@ function quotationTemplateNumericValue($raw): ?float
 function quotationTemplateColumnRole(array $column): ?string
 {
     $label = mb_strtolower(trim((string)($column['column_label'] ?? $column['label'] ?? '')), 'UTF-8');
+    $label = preg_replace('/\([^)]*\)/u', ' ', $label) ?? $label;
     $label = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $label) ?? $label;
     $label = trim($label);
-    if (preg_match('/^(qty|quantity|ea|eau|qty eau|quantity eau)$/u', $label)) {
+    if (preg_match('/^(qty|quantity|ea|eau)(?:\s|$)/u', $label)) {
         return 'qty';
     }
-    if (preg_match('/^(rate|unit rate|price|unit price|unit cost)$/u', $label)) {
+    if (preg_match('/^(unit rate|rate|unit price|price|unit cost)(?:\s|$)/u', $label)) {
         return 'rate';
     }
-    if (preg_match('/^(amount|line amount|total amount|line total)$/u', $label)) {
+    if (preg_match('/^(line amount|total amount|line total|amount)(?:\s|$)/u', $label)) {
         return 'amount';
     }
     return null;
