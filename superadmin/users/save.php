@@ -61,7 +61,10 @@ try {
 } catch (Throwable $e) {
     $conn->rollback();
     error_log('Company user creation failed: ' . $e->getMessage());
-    adminUserFail('User could not be created with these access settings. Run the user-permissions migration, then try again.');
+    $message = $e instanceof mysqli_sql_exception
+        ? 'User could not be created. Confirm the user-permissions migration is applied and the selected template settings are valid.'
+        : $e->getMessage();
+    adminUserFail($message);
 }
 $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 header('Location: index.php?created=1');
