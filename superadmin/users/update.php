@@ -72,7 +72,10 @@ try {
 } catch (Throwable $e) {
     $conn->rollback();
     error_log('Company user update failed: ' . $e->getMessage());
-    adminEditFail('User access could not be saved. Run the user-permissions migration, then try again.', $id);
+    $message = $e instanceof mysqli_sql_exception
+        ? 'User could not be saved. Confirm the user-permissions migration is applied and the selected template settings are valid.'
+        : $e->getMessage();
+    adminEditFail($message, $id);
 }
 $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 header('Location: index.php?updated=1');
