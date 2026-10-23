@@ -930,6 +930,7 @@ $term_sets_json =
 </thead>
 
 <tbody id="quotationBody"></tbody>
+<tfoot id="quotationTotals"></tfoot>
 
 </table>
 
@@ -1239,6 +1240,12 @@ document.addEventListener(
         const defaultColumns = <?= json_encode($templateConfig['columns'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
         const productCatalog = <?= json_encode($products, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
         const productMasterFieldMap = <?= json_encode($productMasterFieldMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        
+        const calculationConfig = <?= json_encode($templateConfig['calculation'] ?? ['mode'=>'standard','formula'=>''], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        const roundingConfig = <?= json_encode($templateConfig['rounding'] ?? ['decimal_places'=>2,'mode'=>'half_up'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        const taxConfig = <?= json_encode($templateConfig['tax'] ?? ['gst_enabled'=>false,'gst_rate'=>0], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        const totalsConfig = <?= json_encode($templateConfig['totals'] ?? ['show_line_amount'=>true,'show_subtotal'=>true,'show_tax'=>false,'show_grand_total'=>true], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+
         const canSaveProducts = <?= erpCan('quotations.save_products_to_master') ? 'true' : 'false'; ?>;
         let columns = Array.isArray(defaultColumns) && defaultColumns.length
             ? defaultColumns
@@ -1269,6 +1276,7 @@ document.addEventListener(
             document.getElementById(
                 "quotationBody"
             );
+        quotationBody.addEventListener("input", updateLiveAmounts);
 
         const commercialTermsBody =
             document.getElementById(
@@ -1307,6 +1315,189 @@ document.addEventListener(
         // Refresh the item table after currency changes.
         function refreshQuotationTable() {
             renderQuotationTable();
+        }
+
+
+
+        const calculationConfig = <?= json_encode($templateConfig['calculation'] ?? ['mode'=>'standard','formula'=>''], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        const roundingConfig = <?= json_encode($templateConfig['rounding'] ?? ['decimal_places'=>2,'mode'=>'half_up'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        const taxConfig = <?= json_encode($templateConfig['tax'] ?? ['gst_enabled'=>false,'gst_rate'=>0], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        const totalsConfig = <?= json_encode($templateConfig['totals'] ?? ['show_line_amount'=>true,'show_subtotal'=>true,'show_tax'=>false,'show_grand_total'=>true], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        const showLineAmount = Object.prototype.hasOwnProperty.call(totalsConfig, "show_line_amount")
+            ? !!totalsConfig.show_line_amount
+            : true;
+        const showSubtotal = !!totalsConfig.show_subtotal;
+        const showTax = !!(totalsConfig.show_tax ?? totalsConfig.show_total) && !!taxConfig.gst_enabled;
+        const showGrandTotal = !!totalsConfig.show_grand_total;
+        const decimalPlaces = Math.max(0, Math.min(4, Number.parseInt(roundingConfig.decimal_places ?? 2, 10) || 0));
+        const totalsFoot = document.getElementById("quotationTotals");
+
+        function amountColumnRole(column) {
+            const label = String(column.label || column.column_label || "")
+                .toLowerCase()
+                .replace(/[^\p{L}\p{N}]+/gu, " ")
+                .trim();
+            if (/^(qty|quantity|ea|eau|qty eau|quantity eau)$/.test(label)) return "qty";
+            if (/^(rate|unit rate|price|unit price|unit cost)$/.test(label)) return "rate";
+            if (/^(amount|line amount|total amount|line total)$/.test(label)) return "amount";
+            return null;
+        }
+
+        function amountNumericValue(raw) {
+            const cleaned = String(raw ?? "").trim().replace(/[,₹$€£%\s]/gu, "");
+            if (cleaned === "" || !Number.isFinite(Number(cleaned))) return null;
+            return Number(cleaned);
+        }
+
+        function evaluateAmountFormula(formula, variables) {
+            const source = String(formula || "").trim();
+            if (!source || source.length > 500) return null;
+            const tokens = [];
+            const tokenPattern = /\s*(qty|quantity|rate|price|amount|(?:\d+(?:\.\d*)?|\.\d+)|[()+\-*\/])\s*/iy;
+            let cursor = 0;
+            while (cursor < source.length) {
+                tokenPattern.lastIndex = cursor;
+                const match = tokenPattern.exec(source);
+                if (!match) return null;
+                tokens.push(match[1].toLowerCase());
+                cursor = tokenPattern.lastIndex;
+            }
+            let position = 0;
+            function factor() {
+                if (tokens[position] === "-") {
+                    position++;
+                    const value = factor();
+                    return value === null ? null : -value;
+                }
+                if (tokens[position] === "(") {
+                    position++;
+                    const value = expression();
+                    if (tokens[position] !== ")") return null;
+                    position++;
+                    return value;
+                }
+                const token = tokens[position++];
+                if (token === undefined) return null;
+                if (/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(token)) return Number(token);
+                const key = token === "qty" || token === "quantity" ? "qty"
+                    : token === "rate" || token === "price" ? "rate" : token === "amount" ? "amount" : null;
+                return key && Number.isFinite(variables[key]) ? variables[key] : null;
+            }
+            function term() {
+                let value = factor();
+                while (value !== null && (tokens[position] === "*" || tokens[position] === "/")) {
+                    const operator = tokens[position++];
+                    const right = factor();
+                    if (right === null || (operator === "/" && right === 0)) return null;
+                    value = operator === "*" ? value * right : value / right;
+                    if (!Number.isFinite(value)) return null;
+                }
+                return value;
+            }
+            function expression() {
+                let value = term();
+                while (value !== null && (tokens[position] === "+" || tokens[position] === "-")) {
+                    const operator = tokens[position++];
+                    const right = term();
+                    if (right === null) return null;
+                    value = operator === "+" ? value + right : value - right;
+                    if (!Number.isFinite(value)) return null;
+                }
+                return value;
+            }
+            const result = expression();
+            return position === tokens.length && Number.isFinite(result) ? result : null;
+        }
+
+        function calculateLineAmount(values) {
+            const variables = {qty:null, rate:null, amount:null};
+            columns.forEach(function (column, index) {
+                const role = amountColumnRole(column);
+                if (role) variables[role] = amountNumericValue(values[index]);
+            });
+            const mode = String(calculationConfig.mode || "standard");
+            if (mode === "custom") {
+                if (variables.amount === null && variables.qty !== null && variables.rate !== null) {
+                    variables.amount = variables.qty * variables.rate;
+                }
+                return evaluateAmountFormula(calculationConfig.formula || "", variables);
+            }
+            if (variables.qty !== null && variables.rate !== null) return variables.qty * variables.rate;
+            return variables.amount;
+        }
+
+        function roundLiveAmount(value) {
+            const factor = 10 ** decimalPlaces;
+            const scaled = value * factor;
+            const mode = roundingConfig.mode || "half_up";
+            if (mode === "ceil") return Math.ceil(scaled) / factor;
+            if (mode === "floor") return Math.floor(scaled) / factor;
+            if (mode === "half_even") {
+                const lower = Math.floor(scaled);
+                const fraction = scaled - lower;
+                if (Math.abs(fraction - 0.5) < 1e-9) return (lower % 2 === 0 ? lower : lower + 1) / factor;
+            }
+            return Math.round(scaled) / factor;
+        }
+
+        function formatLiveAmount(value) {
+            return getCurrencySymbol() + " " + Number(value).toLocaleString("en-IN", {
+                minimumFractionDigits: decimalPlaces,
+                maximumFractionDigits: decimalPlaces
+            });
+        }
+
+        function updateLiveAmounts() {
+            const rows = Array.from(quotationBody.querySelectorAll("tr"));
+            const active = rows.map(function (row) {
+                const values = [];
+                row.querySelectorAll("[data-cell-index]").forEach(function (input) {
+                    values[Number(input.dataset.cellIndex)] = input.value;
+                });
+                return {row:row, values:values, hasValues:values.some(function (value) { return String(value || "").trim() !== ""; })};
+            }).filter(function (item) { return item.hasValues; });
+
+            let subtotal = 0;
+            let calculable = active.length > 0;
+            active.forEach(function (item) {
+                const amount = calculateLineAmount(item.values);
+                item.amount = amount === null ? null : roundLiveAmount(amount);
+                if (item.amount === null || !Number.isFinite(item.amount)) calculable = false;
+                else subtotal += item.amount;
+            });
+
+            rows.forEach(function (row) {
+                const amountCell = row.querySelector(".line-amount-value");
+                if (!amountCell) return;
+                const item = active.find(function (entry) { return entry.row === row; });
+                amountCell.textContent = item && item.amount !== null ? formatLiveAmount(item.amount) : "";
+            });
+
+            if (!totalsFoot) return;
+            totalsFoot.innerHTML = "";
+            if (!calculable) return;
+            subtotal = roundLiveAmount(subtotal);
+            const taxRate = Math.max(0, Math.min(100, Number(taxConfig.gst_rate || 0)));
+            const taxAmount = taxConfig.gst_enabled ? roundLiveAmount(subtotal * taxRate / 100) : 0;
+            const grandTotal = roundLiveAmount(subtotal + taxAmount);
+            const entries = [];
+            if (showSubtotal) entries.push(["Subtotal", subtotal]);
+            if (showTax) entries.push(["GST (" + taxRate + "%)", taxAmount]);
+            if (showGrandTotal) entries.push(["Grand Total", grandTotal]);
+            const totalColumns = columns.length + 4 + (showLineAmount ? 1 : 0);
+            entries.forEach(function (entry) {
+                const tr = document.createElement("tr");
+                tr.className = "quotation-live-total";
+                const label = document.createElement("th");
+                label.colSpan = Math.max(1, totalColumns - 1);
+                label.textContent = entry[0];
+                const value = document.createElement("th");
+                value.className = "text-end text-nowrap";
+                value.textContent = formatLiveAmount(entry[1]);
+                tr.appendChild(label);
+                tr.appendChild(value);
+                totalsFoot.appendChild(tr);
+            });
         }
 
 
@@ -1349,6 +1540,13 @@ document.addEventListener(
                     );
                 }
             );
+
+            if (showLineAmount) {
+                const amountTh = document.createElement("th");
+                amountTh.className = "text-end";
+                amountTh.textContent = "Amount";
+                quotationColumns.appendChild(amountTh);
+            }
 
             const productTh = document.createElement("th");
             productTh.style.minWidth = "190px";
@@ -1591,6 +1789,11 @@ document.addEventListener(
                     }
                 );
 
+                if (showLineAmount) {
+                    const amountTd = document.createElement("td");
+                    amountTd.className = "text-end text-nowrap line-amount-value";
+                    tr.appendChild(amountTd);
+                }
 
                 const productTd = document.createElement("td");
                 const productPicker = document.createElement("select");
@@ -1637,6 +1840,7 @@ document.addEventListener(
                         saveProductCheckbox.disabled = this.value !== "";
                         if (saveProductCheckbox.disabled) saveProductCheckbox.checked = false;
                     }
+                    updateLiveAmounts();
                 });
                 productTd.appendChild(productPicker);
 
@@ -1714,6 +1918,7 @@ document.addEventListener(
                     tr
                 );
             }
+            updateLiveAmounts();
         }
 
 
