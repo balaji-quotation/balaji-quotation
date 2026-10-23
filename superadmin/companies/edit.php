@@ -17,7 +17,8 @@ if (!$id || $id < 1) {
 }
 $stmt = $conn->prepare(
     'SELECT c.id, c.company_name, c.contact_person, c.email, c.mobile, c.alternate_mobile, c.gstin, c.billing_address, c.city, c.state, c.pincode, c.status, c.logo_path,
-            (SELECT s.quotation_prefix FROM quotation_company_settings s WHERE s.company_id = c.id ORDER BY s.id ASC LIMIT 1) AS quotation_prefix
+            (SELECT s.quotation_prefix FROM quotation_company_settings s WHERE s.company_id = c.id ORDER BY s.id ASC LIMIT 1) AS quotation_prefix,
+            (SELECT s.quotation_start_number FROM quotation_company_settings s WHERE s.company_id = c.id ORDER BY s.id ASC LIMIT 1) AS quotation_start_number
      FROM companies c WHERE c.id = ? LIMIT 1'
 );
 $stmt->bind_param('i', $id);
@@ -56,7 +57,8 @@ include __DIR__ . '/../../includes/superadmin_sidebar.php';
             <div class="col-md-6 mb-3"><label class="form-label">Company logo</label><input class="form-control" type="file" name="company_logo" accept="image/png,image/jpeg,image/webp"><small class="text-muted">PNG, JPEG or WebP; maximum 2 MB. Leave blank to keep the current logo.</small>
                 <?php if (!empty($company['logo_path'])) { ?><div class="mt-2"><img src="<?= companyEditEscape($company['logo_path']) ?>" alt="Company logo" style="max-width:180px;max-height:90px;object-fit:contain"></div><?php } ?>
             </div>
-            <div class="col-md-6 mb-3"><label class="form-label">Quotation number format *</label><input class="form-control" name="quotation_prefix" required maxlength="100" value="<?= companyEditEscape(trim((string)($company['quotation_prefix'] ?? '')) !== '' ? $company['quotation_prefix'] : 'QTN/{FY}/{SEQ:4}') ?>"><small class="text-muted">Tokens: {FY}, {YYYY}, {YY}, {SEQ}, {SEQ:5}. Sequence continues within the company.</small></div>
+            <div class="col-md-6 mb-3"><label class="form-label">Quotation number format *</label><input class="form-control" name="quotation_prefix" required maxlength="100" value="<?= companyEditEscape(trim((string)($company['quotation_prefix'] ?? '')) !== '' ? $company['quotation_prefix'] : 'QTN/{FY}/{SEQ:4}') ?>"><small class="text-muted">Tokens: {FY}, {YYYY}, {YY}, {SEQ}, {SEQ:5}.</small></div>
+            <div class="col-md-6 mb-3"><label class="form-label">Starting quotation number *</label><input class="form-control" type="number" name="quotation_start_number" min="1" max="2147483647" value="<?= max(1, (int)($company['quotation_start_number'] ?? 1)) ?>" required><small class="text-muted">Existing quotation numbers remain unchanged; new numbers continue from this sequence or the next unused sequence.</small></div>
             <div class="col-md-4 mb-3"><label class="form-label">Status</label><select class="form-select" name="status">
                 <?php foreach (['Active', 'Inactive', 'Suspended'] as $status) { ?><option value="<?= $status ?>" <?= $company['status'] === $status ? 'selected' : '' ?>><?= $status ?></option><?php } ?>
             </select></div>
