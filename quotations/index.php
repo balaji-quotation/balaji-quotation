@@ -676,17 +676,20 @@ function quotationStatusBadge($status)
 
     </div>
 
-    <?php if (empty($_SESSION['subscription_read_only'])) { ?>
-    <a
-        href="add.php"
-        class="btn btn-primary btn-sm"
-    >
-        <i class="mdi mdi-plus me-1"></i>
-        New Quotation
-    </a>
-    <?php } else { ?>
-    <span class="badge bg-warning text-dark">Read-only subscription</span>
-    <?php } ?>
+    <div class="d-flex gap-2 align-items-center">
+        <?php if (erpCan('products.view')) { ?>
+        <a href="../products/index.php" class="btn btn-outline-secondary btn-sm">
+            <i class="ri-box-3-line me-1"></i> Product Master
+        </a>
+        <?php } ?>
+        <?php if (empty($_SESSION['subscription_read_only'])) { ?>
+        <a href="add.php" class="btn btn-primary btn-sm">
+            <i class="mdi mdi-plus me-1"></i> New Quotation
+        </a>
+        <?php } else { ?>
+        <span class="badge bg-warning text-dark">Read-only subscription</span>
+        <?php } ?>
+    </div>
 
 </div>
 
