@@ -36,7 +36,7 @@ $e = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
         <?php endforeach; ?>
         <?php if (!$products): ?><tr><td colspan="<?= 3 + count($fields) + ((erpCan('products.edit') || erpCan('products.delete')) ? 1 : 0) ?>" class="text-center text-muted py-4">No products found.</td></tr><?php endif; ?>
         </tbody></table></div>
-        <div class="small text-muted">Existing product codes and legacy product details are retained in the database. This screen does not delete product records.</div>
+        <div class="small text-muted">Products referenced by quotations or other records are protected from deletion to preserve history.</div>
     </div></div>
 </div></div></div>
 <?php include __DIR__ . '/../includes/footer.php'; ?>
