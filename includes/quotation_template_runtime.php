@@ -22,6 +22,14 @@ function quotationTemplateNumericValue($raw): ?float
 
 function quotationTemplateColumnRole(array $column): ?string
 {
+    $configuredRole = strtolower(trim((string)($column['field_role'] ?? $column['role'] ?? '')));
+    if (in_array($configuredRole, ['qty', 'quantity'], true)) return 'qty';
+    if (in_array($configuredRole, ['rate', 'price'], true)) return 'rate';
+    if (in_array($configuredRole, ['amount', 'auto_amount', 'line_amount'], true)) return 'amount';
+
+    $type = strtolower(trim((string)($column['data_type'] ?? $column['type'] ?? '')));
+    if ($type === 'auto_amount') return 'amount';
+
     $label = mb_strtolower(trim((string)($column['column_label'] ?? $column['label'] ?? '')), 'UTF-8');
     $label = preg_replace('/\([^)]*\)/u', ' ', $label) ?? $label;
     $label = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $label) ?? $label;
