@@ -61,7 +61,7 @@ try {
         (int)$_SESSION['user_id'],
         (int)$templateVersionId,
         (int)($existing['assigned_template_version_id'] ?? 0),
-        $_POST['quotation_fields'] ?? [],
+        (string)($_POST['quotation_columns_json'] ?? ''),
         (string)($_POST['print_layout'] ?? '')
     );
     $assign = $conn->prepare('UPDATE users SET assigned_template_version_id = ? WHERE id = ? AND company_id = ?');
