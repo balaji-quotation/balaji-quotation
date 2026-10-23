@@ -3,8 +3,9 @@ declare(strict_types=1);
 
 /**
  * Additive migration for the configurable Product Master.
- * Default mode is read-only preflight. Existing product rows and legacy columns
- * are preserved; this script only adds two columns and one metadata table.
+ * Default mode is read-only preflight. Existing product rows are preserved;
+ * this script adds two columns and one metadata table and widens product_name
+ * to 255 characters when the legacy column is shorter.
  *
  * Usage:
  *   php tools/migrate_product_master.php
