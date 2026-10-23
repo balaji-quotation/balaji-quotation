@@ -78,7 +78,14 @@ $current_role = erpCurrentRole();
                 <li class="menu-title">WORKSPACE</li>
                 <li><a href="/quotation/client/dashboard.php" class="side-nav-link"><i class="ri-dashboard-2-line"></i><span>Dashboard</span></a></li>
                 <li><a href="/quotation/clients/index.php" class="side-nav-link"><i class="ri-contacts-line"></i><span>Customers</span></a></li>
-                <li><a href="/quotation/quotations/index.php" class="side-nav-link"><i class="ri-file-text-line"></i><span>Quotations</span></a></li>
+                <li>
+                    <a href="/quotation/quotations/index.php" class="side-nav-link"><i class="ri-file-text-line"></i><span>Quotations</span></a>
+                    <?php if (erpCan('products.view')): ?>
+                    <ul style="list-style:none;padding:0 0 0 28px;margin:0;">
+                        <li><a href="/quotation/products/index.php" class="side-nav-link"><i class="ri-box-3-line"></i><span>Product Master</span></a></li>
+                    </ul>
+                    <?php endif; ?>
+                </li>
                 <li><a href="/quotation/client/template_request.php" class="side-nav-link"><i class="ri-message-2-line"></i><span>Template Change Request</span></a></li>
                 <li><a href="/quotation/client/company_profile.php" class="side-nav-link"><i class="ri-building-line"></i><span>Company Profile</span></a></li>
                 <li><a href="/quotation/users/profile.php" class="side-nav-link"><i class="ri-user-line"></i><span>My Profile</span></a></li>
