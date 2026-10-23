@@ -111,10 +111,6 @@ function erpCreateUserQuotationTemplate(
     if (!in_array($layout, $allowedLayouts, true)) {
         throw new RuntimeException('Choose a valid quotation print design.');
     }
-    if (!is_array($submittedIndexes)) {
-        throw new RuntimeException('Choose at least one quotation field.');
-    }
-
     $source = $db->prepare(
         'SELECT v.id, v.template_id, v.config_json, t.template_name, t.description
          FROM quotation_template_versions v
