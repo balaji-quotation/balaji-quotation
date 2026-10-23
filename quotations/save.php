@@ -1055,7 +1055,7 @@ try {
             $productInsertSql = $hasProductDescription
                 ? "INSERT INTO products
                    (company_id, product_code, product_name, default_rate, part_number, drawing_number, revision_no, pricing_type, unit, weight_per_piece, material, quantity, priority, status, drawing_file, product_image, remarks, description)
-                   VALUES (?, ?, ?, ?, ?, '', '00', 'PCS', 'PCS', 0, '', 0, 'Low', 'Active', '', '', ?, ?)"
+                   VALUES (?, ?, ?, ?, ?, '', '00', 'PCS', 'PCS', 0, '', 0, 'Low', 'Received', '', '', ?, ?)"
                 : "INSERT INTO products
                    (company_id, product_code, product_name, default_rate, part_number, drawing_number, revision_no, pricing_type, unit, weight_per_piece, material, quantity, priority, status, drawing_file, product_image, remarks)
                    VALUES (?, ?, ?, ?, ?, '', '00', 'PCS', 'PCS', 0, '', 0, 'Low', 'Active', '', '', ?)";
