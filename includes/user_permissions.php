@@ -77,6 +77,7 @@ function erpLoadUserPermissionOverrides(mysqli $db, int $userId): ?array
  */
 function erpUserPermissionSelection(mysqli $db, int $userId, string $role): array
 {
+    $role = function_exists('erpNormalizeRole') ? erpNormalizeRole($role) : $role;
     $map = function_exists('erpPermissionMap') ? erpPermissionMap() : [];
     $overrides = erpLoadUserPermissionOverrides($db, $userId) ?? [];
     $selected = [];
