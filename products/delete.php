@@ -9,6 +9,7 @@ if (!isset($_SESSION['user_id'])) {
 
 require_once __DIR__ . "/../includes/db.php";
 require_once __DIR__ . '/../includes/permissions.php';
+require_once __DIR__ . '/../includes/product_master.php';
 erpRequireCompanyUser($conn);
 erpRequire('products.delete');
 $companyId = erpCurrentCompanyId();
@@ -131,167 +132,44 @@ if ($quotation_count > 0) {
 
 
 // =====================================================
-// CHECK PRODUCT OPERATIONS
+// CHECK OPTIONAL PRODUCT REFERENCES
 // =====================================================
 
-$operation_stmt =
-    mysqli_prepare(
+// Some legacy modules are not installed in every quotation database.
+// Check only tables that exist so a missing optional module cannot block
+// deleting an otherwise unused product.
+$optionalReferenceTables = [
+    'product_operations' => 'linked',
+    'vendor_po_items' => 'vendor_po_linked',
+    'client_po_items' => 'client_po_linked',
+];
+
+foreach ($optionalReferenceTables as $table => $message) {
+    if (!productMasterTableExists($conn, $table)) {
+        continue;
+    }
+
+    $reference_stmt = mysqli_prepare(
         $conn,
-        "
-        SELECT COUNT(*) AS total
-        FROM product_operations
-        WHERE product_id = ?
-        "
+        "SELECT COUNT(*) AS total FROM `" . $table . "` WHERE product_id = ?"
     );
 
-if (!$operation_stmt) {
+    if (!$reference_stmt) {
+        error_log("Product reference check prepare error for " . $table . ": " . mysqli_error($conn));
+        header("Location: index.php?msg=db_error");
+        exit;
+    }
 
-    error_log(
-        "Product operation check error: " .
-        mysqli_error($conn)
-    );
+    mysqli_stmt_bind_param($reference_stmt, "i", $id);
+    mysqli_stmt_execute($reference_stmt);
+    $reference_result = mysqli_stmt_get_result($reference_stmt);
+    $reference_row = mysqli_fetch_assoc($reference_result);
+    mysqli_stmt_close($reference_stmt);
 
-    header("Location: index.php?msg=db_error");
-    exit;
-}
-
-mysqli_stmt_bind_param(
-    $operation_stmt,
-    "i",
-    $id
-);
-
-mysqli_stmt_execute($operation_stmt);
-
-$operation_result =
-    mysqli_stmt_get_result($operation_stmt);
-
-$operation_row =
-    mysqli_fetch_assoc($operation_result);
-
-mysqli_stmt_close($operation_stmt);
-
-$total_operations =
-    intval($operation_row['total'] ?? 0);
-
-if ($total_operations > 0) {
-
-    header(
-        "Location: index.php?msg=linked&count=" .
-        $total_operations
-    );
-
-    exit;
-}
-
-
-// =====================================================
-// CHECK VENDOR PO ITEMS
-// =====================================================
-
-$vendor_po_stmt =
-    mysqli_prepare(
-        $conn,
-        "
-        SELECT COUNT(*) AS total
-        FROM vendor_po_items
-        WHERE product_id = ?
-        "
-    );
-
-if (!$vendor_po_stmt) {
-
-    error_log(
-        "Vendor PO check error: " .
-        mysqli_error($conn)
-    );
-
-    header("Location: index.php?msg=db_error");
-    exit;
-}
-
-mysqli_stmt_bind_param(
-    $vendor_po_stmt,
-    "i",
-    $id
-);
-
-mysqli_stmt_execute($vendor_po_stmt);
-
-$vendor_po_result =
-    mysqli_stmt_get_result($vendor_po_stmt);
-
-$vendor_po_row =
-    mysqli_fetch_assoc($vendor_po_result);
-
-mysqli_stmt_close($vendor_po_stmt);
-
-$total_vendor_po =
-    intval($vendor_po_row['total'] ?? 0);
-
-if ($total_vendor_po > 0) {
-
-    header(
-        "Location: index.php?msg=vendor_po_linked&count=" .
-        $total_vendor_po
-    );
-
-    exit;
-}
-
-
-// =====================================================
-// CHECK CLIENT PO ITEMS
-// =====================================================
-
-$client_po_stmt =
-    mysqli_prepare(
-        $conn,
-        "
-        SELECT COUNT(*) AS total
-        FROM client_po_items
-        WHERE product_id = ?
-        "
-    );
-
-if (!$client_po_stmt) {
-
-    error_log(
-        "Client PO check error: " .
-        mysqli_error($conn)
-    );
-
-    header("Location: index.php?msg=db_error");
-    exit;
-}
-
-mysqli_stmt_bind_param(
-    $client_po_stmt,
-    "i",
-    $id
-);
-
-mysqli_stmt_execute($client_po_stmt);
-
-$client_po_result =
-    mysqli_stmt_get_result($client_po_stmt);
-
-$client_po_row =
-    mysqli_fetch_assoc($client_po_result);
-
-mysqli_stmt_close($client_po_stmt);
-
-$total_client_po =
-    intval($client_po_row['total'] ?? 0);
-
-if ($total_client_po > 0) {
-
-    header(
-        "Location: index.php?msg=client_po_linked&count=" .
-        $total_client_po
-    );
-
-    exit;
+    if ((int)($reference_row['total'] ?? 0) > 0) {
+        header("Location: index.php?msg=" . $message);
+        exit;
+    }
 }
 
 
