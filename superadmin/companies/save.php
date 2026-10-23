@@ -40,6 +40,10 @@ $city = companyPost('city', 100);
 $state = companyPost('state', 100);
 $pincode = companyPost('pincode', 20);
 $quotationNumberFormat = companyPost('quotation_prefix', 100);
+$quotationStartingNumber = filter_var($_POST['quotation_start_number'] ?? '1', FILTER_VALIDATE_INT);
+if ($quotationStartingNumber === false || $quotationStartingNumber < 1 || $quotationStartingNumber > 2147483647) {
+    companySaveFail('Starting quotation number must be between 1 and 2,147,483,647.');
+}
 if ($quotationNumberFormat === '') {
     $quotationNumberFormat = 'QTN/{FY}/{SEQ:4}';
 }
@@ -129,7 +133,8 @@ try {
         $city,
         $state,
         $pincode,
-        $quotationNumberFormat
+        $quotationNumberFormat,
+        $quotationStartingNumber
     );
 
     // Copy the selected approved template into the new company so template assignments remain tenant-scoped.
