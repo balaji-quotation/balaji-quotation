@@ -1319,10 +1319,6 @@ document.addEventListener(
 
 
 
-        const calculationConfig = <?= json_encode($templateConfig['calculation'] ?? ['mode'=>'standard','formula'=>''], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-        const roundingConfig = <?= json_encode($templateConfig['rounding'] ?? ['decimal_places'=>2,'mode'=>'half_up'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-        const taxConfig = <?= json_encode($templateConfig['tax'] ?? ['gst_enabled'=>false,'gst_rate'=>0], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-        const totalsConfig = <?= json_encode($templateConfig['totals'] ?? ['show_line_amount'=>true,'show_subtotal'=>true,'show_tax'=>false,'show_grand_total'=>true], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
         const showLineAmount = Object.prototype.hasOwnProperty.call(totalsConfig, "show_line_amount")
             ? !!totalsConfig.show_line_amount
             : true;
@@ -1484,7 +1480,7 @@ document.addEventListener(
             if (showSubtotal) entries.push(["Subtotal", subtotal]);
             if (showTax) entries.push(["GST (" + taxRate + "%)", taxAmount]);
             if (showGrandTotal) entries.push(["Grand Total", grandTotal]);
-            const totalColumns = columns.length + 4 + (showLineAmount ? 1 : 0);
+            const totalColumns = columns.length + 3 + (showLineAmount ? 1 : 0);
             entries.forEach(function (entry) {
                 const tr = document.createElement("tr");
                 tr.className = "quotation-live-total";
