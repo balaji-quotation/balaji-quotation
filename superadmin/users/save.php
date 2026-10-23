@@ -42,6 +42,21 @@ try {
     $newUserId = (int)$conn->insert_id;
     $stmt->close();
     erpSaveUserPermissionOverrides($conn, $newUserId, $_POST['permissions'] ?? []);
+    $userTemplateVersionId = erpCreateUserQuotationTemplate(
+        $conn,
+        (int)$companyId,
+        $newUserId,
+        $name,
+        (int)$_SESSION['user_id'],
+        (int)$templateVersionId,
+        0,
+        $_POST['quotation_fields'] ?? [],
+        (string)($_POST['print_layout'] ?? '')
+    );
+    $assign = $conn->prepare('UPDATE users SET assigned_template_version_id = ? WHERE id = ? AND company_id = ?');
+    $assign->bind_param('iii', $userTemplateVersionId, $newUserId, $companyId);
+    $assign->execute();
+    $assign->close();
     $conn->commit();
 } catch (Throwable $e) {
     $conn->rollback();
