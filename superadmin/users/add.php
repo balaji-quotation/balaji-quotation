@@ -25,7 +25,8 @@ $error = $_SESSION['admin_user_error'] ?? ''; unset($_SESSION['admin_user_error'
     <form method="post" action="save.php" autocomplete="off"><input type="hidden" name="csrf_token" value="<?= adminAddEscape($_SESSION['csrf_token']) ?>">
         <div class="card"><div class="card-body"><div class="row">
             <div class="col-md-6 mb-3"><label class="form-label">Company *</label><select name="company_id" id="company_id" class="form-select" required><option value="">Choose company</option><?php while ($company = $companies->fetch_assoc()) { ?><option value="<?= (int)$company['id'] ?>"><?= adminAddEscape($company['company_name']) ?> · <?= adminAddEscape($company['subscription_plan'] ?? 'Plan not set') ?></option><?php } ?></select></div>
-            <div class="col-md-6 mb-3"><label class="form-label">Assigned template version *</label><select name="template_version_id" id="template_version_id" class="form-select" required disabled><option value="">Choose company first</option><?php while ($template = $templates->fetch_assoc()) { $fieldConfig = json_decode((string)$template['config_json'], true); $fieldLabels = array_values(array_filter(array_map(static fn($field) => (string)($field['label'] ?? ''), is_array($fieldConfig['columns'] ?? null) ? $fieldConfig['columns'] : []))); ?><option value="<?= (int)$template['version_id'] ?>" data-company-id="<?= (int)$template['company_id'] ?>" data-fields="<?= adminAddEscape(json_encode($fieldLabels, JSON_UNESCAPED_UNICODE)) ?>"><?= adminAddEscape($template['company_name']) ?> · <?= adminAddEscape($template['template_name']) ?> · v<?= (int)$template['version_number'] ?></option><?php } ?></select><small class="text-muted">This template assigns the quotation fields available to this user.</small><div id="assignedTemplateFields" class="small text-primary mt-1">Choose a template to preview its fields.</div></div>
+            <div class="col-md-6 mb-3"><label class="form-label">Assigned template version *</label><select name="template_version_id" id="template_version_id" class="form-select" required disabled><option value="">Choose company first</option><?php while ($template = $templates->fetch_assoc()) { $fieldConfig = json_decode((string)$template['config_json'], true); $fieldLabels = array_values(array_filter(array_map(static fn($field) => (string)($field['label'] ?? ''), is_array($fieldConfig['columns'] ?? null) ? $fieldConfig['columns'] : []))); ?><option value="<?= (int)$template['version_id'] ?>" data-company-id="<?= (int)$template['company_id'] ?>" data-config="<?= adminAddEscape((string)$template['config_json']) ?>"><?= adminAddEscape($template['company_name']) ?> · <?= adminAddEscape($template['template_name']) ?> · v<?= (int)$template['version_number'] ?></option><?php } ?></select><small class="text-muted">This template assigns the quotation fields available to this user.</small><div class="small text-muted mt-1">Choose which quotation fields this user can use:</div><div id="quotationFieldChoices" class="vstack gap-1 mt-2"><span class="text-muted small">Choose a template first.</span></div></div>
+            <div class="col-md-6 mb-3"><label class="form-label">Quotation print design *</label><select class="form-select" name="print_layout" id="print_layout" required><option value="Classic">Classic</option><option value="Compact">Compact</option><option value="Minimal">Minimal</option><option value="Modern">Modern</option></select><small class="text-muted">This design is saved for this user's quotations. Earlier quotations keep their saved design.</small></div>
             <div class="col-md-4 mb-3"><label class="form-label">Full name *</label><input class="form-control" name="name" maxlength="100" required></div>
             <div class="col-md-4 mb-3"><label class="form-label">Login email *</label><input class="form-control" name="email" type="email" maxlength="100" required></div>
             <div class="col-md-4 mb-3"><label class="form-label">Temporary password *</label><input class="form-control" name="password" type="password" minlength="12" required autocomplete="new-password"></div>
@@ -48,7 +49,8 @@ $error = $_SESSION['admin_user_error'] ?? ''; unset($_SESSION['admin_user_error'
 (function () {
     var companySelect = document.getElementById('company_id');
     var templateSelect = document.getElementById('template_version_id');
-    var fieldPreview = document.getElementById('assignedTemplateFields');
+    var fieldChoices = document.getElementById('quotationFieldChoices');
+    var layoutSelect = document.getElementById('print_layout');
     if (!companySelect || !templateSelect) return;
     var options = Array.prototype.slice.call(templateSelect.options);
 
@@ -56,7 +58,7 @@ $error = $_SESSION['admin_user_error'] ?? ''; unset($_SESSION['admin_user_error'
         var companyId = companySelect.value;
         templateSelect.value = '';
         templateSelect.disabled = !companyId;
-        if (fieldPreview) fieldPreview.textContent = 'Choose a template to preview its fields.';
+        if (fieldChoices) fieldChoices.innerHTML = '<span class="text-muted small">Choose a template first.</span>';
         options.forEach(function (option) {
             if (!option.value) return;
             var allowed = option.getAttribute('data-company-id') === companyId;
@@ -67,18 +69,44 @@ $error = $_SESSION['admin_user_error'] ?? ''; unset($_SESSION['admin_user_error'
         placeholder.textContent = companyId ? 'Choose template' : 'Choose company first';
     }
 
-    templateSelect.addEventListener('change', function () {
+    function renderTemplateSettings() {
         var selected = templateSelect.options[templateSelect.selectedIndex];
-        if (!fieldPreview) return;
+        if (!selected || !selected.value || !fieldChoices) return;
         try {
-            var fields = JSON.parse(selected.getAttribute('data-fields') || '[]');
-            fieldPreview.textContent = fields.length ? 'Assigned quotation fields: ' + fields.join(', ') : 'This template has no quotation item fields.';
+            var config = JSON.parse(selected.getAttribute('data-config') || '{}');
+            var columns = Array.isArray(config.columns) ? config.columns : [];
+            fieldChoices.replaceChildren();
+            if (!columns.length) {
+                fieldChoices.textContent = 'This template has no quotation item fields.';
+                return;
+            }
+            columns.forEach(function (column, index) {
+                var label = document.createElement('label');
+                label.className = 'form-check small';
+                var checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = 'quotation_fields[]';
+                checkbox.value = String(index);
+                checkbox.className = 'form-check-input';
+                checkbox.checked = true;
+                var text = document.createElement('span');
+                text.className = 'form-check-label';
+                text.textContent = String(column.label || ('Field ' + (index + 1)));
+                label.appendChild(checkbox);
+                label.appendChild(text);
+                fieldChoices.appendChild(label);
+            });
+            if (layoutSelect && ['Classic','Compact','Minimal','Modern'].includes(config.print_layout)) {
+                layoutSelect.value = config.print_layout;
+            }
         } catch (e) {
-            fieldPreview.textContent = 'The template fields could not be previewed.';
+            fieldChoices.textContent = 'The template settings could not be loaded.';
         }
-    });
+    }
+    templateSelect.addEventListener('change', renderTemplateSettings);
     companySelect.addEventListener('change', filterTemplates);
     filterTemplates();
+    templateSelect.addEventListener('change', renderTemplateSettings);
 })();
 </script>
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
