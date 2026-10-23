@@ -103,10 +103,9 @@ $error = $_SESSION['admin_user_error'] ?? ''; unset($_SESSION['admin_user_error'
             fieldChoices.textContent = 'The template settings could not be loaded.';
         }
     }
-    templateSelect.addEventListener('change', renderTemplateSettings);
     companySelect.addEventListener('change', filterTemplates);
-    filterTemplates();
     templateSelect.addEventListener('change', renderTemplateSettings);
+    filterTemplates();
 })();
 </script>
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
