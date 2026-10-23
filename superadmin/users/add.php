@@ -27,7 +27,7 @@ $error = $_SESSION['admin_user_error'] ?? ''; unset($_SESSION['admin_user_error'
         <div class="card"><div class="card-body"><div class="row">
             <div class="col-md-6 mb-3"><label class="form-label" for="company_name">Company name *</label><input class="form-control" type="text" name="company_name" id="company_name" maxlength="255" autocomplete="organization" placeholder="Type the company name" required><small class="text-muted" id="companyNameHelp">Type a company name. If it is new, this form will create its company record.</small></div>
             <div class="col-md-6 mb-3 d-none" id="newCompanyPlanWrap"><label class="form-label" for="new_company_plan">Plan for new company *</label><select class="form-select" name="new_company_plan" id="new_company_plan"><option value="Business">Business — 1 user</option><option value="Premium">Premium — 2 users</option></select><small class="text-muted">Trial or paid dates can be set later in Subscriptions.</small></div>
-            <div class="col-md-6 mb-3"><label class="form-label">Assigned template version *</label><select name="template_version_id" id="template_version_id" class="form-select" required disabled><option value="">Choose company first</option><?php while ($template = $templates->fetch_assoc()) { $fieldConfig = json_decode((string)$template['config_json'], true); $fieldLabels = array_values(array_filter(array_map(static fn($field) => (string)($field['label'] ?? ''), is_array($fieldConfig['columns'] ?? null) ? $fieldConfig['columns'] : []))); ?><option value="<?= (int)$template['version_id'] ?>" data-company-id="<?= (int)$template['company_id'] ?>" data-company-name="<?= adminAddEscape($template['company_name']) ?>" data-config="<?= adminAddEscape((string)$template['config_json']) ?>"><?= adminAddEscape($template['company_name']) ?> · <?= adminAddEscape($template['template_name']) ?> · v<?= (int)$template['version_number'] ?></option><?php } ?></select><small class="text-muted">This template assigns the quotation fields available to this user.</small><div class="small text-muted mt-1">Customize the user's quotation table. Add, edit, remove, or reorder fields:</div><div id="quotationFieldBuilder" class="vstack gap-2 mt-2"></div><div id="quotationFieldError" class="small text-danger mt-1"></div><button class="btn btn-outline-primary btn-sm mt-2" type="button" id="addQuotationField">+ Add quotation field</button><textarea class="d-none" name="quotation_columns_json" id="quotationColumnsJson"></textarea></div>
+            <div class="col-12 mb-3"><label class="form-label">Assigned template version *</label><select name="template_version_id" id="template_version_id" class="form-select" required disabled><option value="">Choose company first</option><?php while ($template = $templates->fetch_assoc()) { $fieldConfig = json_decode((string)$template['config_json'], true); $fieldLabels = array_values(array_filter(array_map(static fn($field) => (string)($field['label'] ?? ''), is_array($fieldConfig['columns'] ?? null) ? $fieldConfig['columns'] : []))); ?><option value="<?= (int)$template['version_id'] ?>" data-company-id="<?= (int)$template['company_id'] ?>" data-company-name="<?= adminAddEscape($template['company_name']) ?>" data-config="<?= adminAddEscape((string)$template['config_json']) ?>"><?= adminAddEscape($template['company_name']) ?> · <?= adminAddEscape($template['template_name']) ?> · v<?= (int)$template['version_number'] ?></option><?php } ?></select><small class="text-muted">Choose the user's table fields and calculation roles below. Changes apply to this user's new quotations.</small><div class="small text-muted mt-1">Set Quantity and Rate roles for automatic calculation. Use Auto Amount as both the input type and calculation role for a calculated amount column.</div><div id="quotationFieldBuilder" class="vstack gap-2 mt-2"></div><div id="quotationFieldError" class="small text-danger mt-1"></div><button class="btn btn-outline-primary btn-sm mt-2" type="button" id="addQuotationField">+ Add quotation field</button><textarea class="d-none" name="quotation_columns_json" id="quotationColumnsJson"></textarea></div>
             <div class="col-md-6 mb-3"><label class="form-label">Quotation print design *</label><select class="form-select" name="print_layout" id="print_layout" required><option value="Classic">Classic</option><option value="Compact">Compact</option><option value="Minimal">Minimal</option><option value="Modern">Modern</option></select><small class="text-muted">This design is saved for this user's quotations. Earlier quotations keep their saved design.</small></div>
             <div class="col-md-4 mb-3"><label class="form-label">Full name *</label><input class="form-control" name="name" maxlength="100" required></div>
             <div class="col-md-4 mb-3"><label class="form-label">Login email *</label><input class="form-control" name="email" type="email" maxlength="100" required></div>
@@ -96,27 +96,35 @@ $error = $_SESSION['admin_user_error'] ?? ''; unset($_SESSION['admin_user_error'
         var row = document.createElement('div');
         row.className = 'row g-2 align-items-end border rounded p-2 mx-0';
         row.setAttribute('data-field-row', '1');
-        var name = makeControl('col-lg-3 col-md-6', 'Field name', column.label, null);
+        var name = makeControl('col-xl-3 col-md-6', 'Field name', column.label, null);
         name.control.classList.add('js-field-label');
         name.control.required = true;
-        var unit = makeControl('col-lg-2 col-md-6', 'Unit (optional)', column.unit, null);
+        var unit = makeControl('col-xl-2 col-md-6', 'Unit (optional)', column.unit, null);
         unit.control.classList.add('js-field-unit');
-        var type = makeControl('col-lg-2 col-md-4', 'Input type', column.type || 'text', [
+        var type = makeControl('col-xl-2 col-md-4', 'Input type', column.type || 'text', [
             {value:'text',label:'Text'}, {value:'number',label:'Number'},
-            {value:'currency',label:'Price / Currency'}, {value:'textarea',label:'Long text'}
+            {value:'currency',label:'Price / Currency'}, {value:'textarea',label:'Long text'}, {value:'auto_amount',label:'Auto Amount'}
         ]);
         type.control.classList.add('js-field-type');
-        var align = makeControl('col-lg-2 col-md-4', 'Text alignment', column.align || 'left', [
+        var role = makeControl('col-xl-2 col-md-4', 'Calculation role', column.field_role || 'none', [
+            {value:'none',label:'Normal field'}, {value:'qty',label:'Quantity'},
+            {value:'rate',label:'Rate'}, {value:'amount',label:'Manual Amount'}, {value:'auto_amount',label:'Auto Amount'}
+        ]);
+        role.control.classList.add('js-field-role');
+        type.control.addEventListener('change', function () { if (this.value === 'auto_amount') role.control.value = 'auto_amount'; else if (role.control.value === 'auto_amount') role.control.value = 'none'; });
+        role.control.addEventListener('change', function () { if (this.value === 'auto_amount') type.control.value = 'auto_amount'; else if (type.control.value === 'auto_amount') type.control.value = 'number'; });
+        var align = makeControl('col-xl-1 col-md-4', 'Align', column.align || 'left', [
             {value:'left',label:'Left'}, {value:'center',label:'Center'}, {value:'right',label:'Right'}
         ]);
         align.control.classList.add('js-field-align');
         row.appendChild(name.wrapper);
         row.appendChild(unit.wrapper);
         row.appendChild(type.wrapper);
+        row.appendChild(role.wrapper);
         row.appendChild(align.wrapper);
 
         var actions = document.createElement('div');
-        actions.className = 'col-lg-3 col-md-4 d-flex gap-1';
+        actions.className = 'col-xl-2 col-md-4 d-flex gap-1';
         function actionButton(label, title, handler) {
             var button = document.createElement('button');
             button.type = 'button';
@@ -177,7 +185,7 @@ $error = $_SESSION['admin_user_error'] ?? ''; unset($_SESSION['admin_user_error'
             return;
         }
         errorBox.textContent = '';
-        addFieldRow({label:'', unit:'', type:'text', align:'left'});
+        addFieldRow({label:'', unit:'', type:'text', field_role:'none', align:'left'});
         fieldBuilder.lastElementChild.querySelector('.js-field-label').focus();
     });
 
@@ -188,6 +196,7 @@ $error = $_SESSION['admin_user_error'] ?? ''; unset($_SESSION['admin_user_error'
                 label: row.querySelector('.js-field-label').value.trim(),
                 unit: row.querySelector('.js-field-unit').value.trim(),
                 type: row.querySelector('.js-field-type').value,
+                field_role: row.querySelector('.js-field-role').value,
                 align: row.querySelector('.js-field-align').value
             };
         });
