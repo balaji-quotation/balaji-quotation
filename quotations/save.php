@@ -10,6 +10,7 @@ if (!isset($_SESSION['user_id'])) {
 include("../includes/db.php");
 require_once __DIR__ . '/../includes/permissions.php';
 require_once __DIR__ . '/../includes/product_master.php';
+require_once __DIR__ . '/../includes/quotation_template_runtime.php';
 erpRequireCompanyUser($conn);
 erpRequire('quotations.add');
 $companyId = erpCurrentCompanyId();
@@ -107,7 +108,8 @@ function quoteAllowedColumnType($value)
         'text',
         'number',
         'currency',
-        'textarea'
+        'textarea',
+        'auto_amount'
     ];
 
     return in_array(
@@ -366,6 +368,7 @@ foreach ($templateConfig['columns'] as $index => $templateColumn) {
         'column_label' => $label,
         'unit_text' => quoteClean($templateColumn['unit'] ?? ''),
         'data_type' => $type,
+        'field_role' => (string)($templateColumn['field_role'] ?? 'none'),
         'text_align' => $align
     ];
 }
@@ -487,6 +490,21 @@ foreach (
             $cell_value;
     }
 
+
+    // Recompute server-side automatic line amount; do not trust posted calculated cells.
+    $calculation = is_array($templateConfig['calculation'] ?? null) ? $templateConfig['calculation'] : ['mode'=>'standard','formula'=>''];
+    $computedAmount = quotationTemplateRowAmount($row_json_data, $columns, $calculation);
+    if ($computedAmount !== null && is_finite($computedAmount)) {
+        $rounding = is_array($templateConfig['rounding'] ?? null) ? $templateConfig['rounding'] : [];
+        $places = max(0, min(4, (int)($rounding['decimal_places'] ?? 2)));
+        $roundMode = (string)($rounding['mode'] ?? 'half_up');
+        $formattedAmount = number_format(quotationTemplateRound($computedAmount, $places, $roundMode), $places, '.', '');
+        foreach ($columns as $column) {
+            if (($column['field_role'] ?? '') === 'auto_amount' || ($column['data_type'] ?? '') === 'auto_amount') {
+                $row_json_data[$column['column_key']] = $formattedAmount;
+            }
+        }
+    }
 
     // Ignore completely blank rows.
 
