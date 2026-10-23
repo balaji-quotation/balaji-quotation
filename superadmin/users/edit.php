@@ -42,7 +42,7 @@ $error = $_SESSION['admin_user_error'] ?? ''; unset($_SESSION['admin_user_error'
                 </div></div>
             <?php } ?>
         </div></div></div>
-        <button class="btn btn-primary" type="submit">Save user</button> <a class="btn btn-light" href="index.php">Cancel</a></div></div>
+        <button class="btn btn-primary" type="submit">Save user</button> <a class="btn btn-light" href="index.php">Cancel</a>
     </form>
 </div></div></div>
 <script>
