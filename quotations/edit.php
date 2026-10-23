@@ -1650,9 +1650,9 @@ document.addEventListener(
             rows.forEach(function (row) {
                 const item = active.find(function (entry) { return entry.row === row; });
                 const amountCell = row.querySelector(".line-amount-value");
-                if (amountCell) amountCell.textContent = item && item.amount !== null ? formatLiveAmount(item.amount) : "";
+                if (amountCell) amountCell.textContent = formatLiveAmount(item && item.amount !== null ? item.amount : 0);
                 row.querySelectorAll("[data-auto-amount-index]").forEach(function (input) {
-                    const amountText = item && item.amount !== null ? formatLiveAmount(item.amount) : "";
+                    const amountText = formatLiveAmount(item && item.amount !== null ? item.amount : 0);
                     input.value = amountText === "" ? "" : String(item.amount);
                     const display = row.querySelector('[data-auto-amount-display="' + input.dataset.autoAmountIndex + '"]');
                     if (display) display.textContent = amountText;
