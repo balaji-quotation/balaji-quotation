@@ -41,9 +41,12 @@ foreach ($columns as $column) {
     $label = mb_substr(trim((string)($column['label'] ?? '')), 0, 100, 'UTF-8');
     $unit = mb_substr(trim((string)($column['unit'] ?? '')), 0, 30, 'UTF-8');
     $type = (string)($column['type'] ?? 'text');
+    $fieldRole = (string)($column['field_role'] ?? 'none');
     $align = (string)($column['align'] ?? 'left');
-    if ($label === '' || !in_array($type, ['text','number','currency','textarea'], true) || !in_array($align, ['left','center','right'], true)) templateFail('Check each column label, type, and alignment.');
-    $cleanColumns[] = ['label'=>$label,'unit'=>$unit,'type'=>$type,'align'=>$align];
+    if ($label === '' || !in_array($type, ['text','number','currency','textarea','auto_amount'], true) || !in_array($fieldRole, ['none','qty','rate','amount','auto_amount'], true) || !in_array($align, ['left','center','right'], true)) templateFail('Check each column label, type, calculation role, and alignment.');
+    if (($type === 'auto_amount') !== ($fieldRole === 'auto_amount')) templateFail('For an automatic line total, set both Input Type and Calculation Role to Auto Amount.');
+    if (in_array($fieldRole, ['qty','rate','amount'], true) && !in_array($type, ['number','currency'], true)) templateFail('Quantity, Rate, and Manual Amount roles require Number or Price / Currency input type.');
+    $cleanColumns[] = ['label'=>$label,'unit'=>$unit,'type'=>$type,'field_role'=>$fieldRole,'align'=>$align];
 }
 $cleanCommercial = [];
 foreach ($commercial as $term) {
@@ -74,12 +77,15 @@ if ($mode === 'custom') {
 $hasQtyColumn = false;
 $hasRateColumn = false;
 $hasAmountColumn = false;
+$autoAmountCount = 0;
 foreach ($cleanColumns as $column) {
     $role = quotationTemplateColumnRole($column);
     if ($role === 'qty') $hasQtyColumn = true;
     if ($role === 'rate') $hasRateColumn = true;
     if ($role === 'amount') $hasAmountColumn = true;
+    if (($column['field_role'] ?? '') === 'auto_amount') $autoAmountCount++;
 }
+if ($autoAmountCount > 1) templateFail('Use only one Auto Amount field per quotation template.');
 $amountVisibilityRequested = $gstEnabled
     || (int)($_POST['show_line_amount'] ?? 0) === 1
     || (int)($_POST['show_subtotal'] ?? 0) === 1
