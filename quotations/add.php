@@ -2020,6 +2020,11 @@ document.addEventListener(
                 }
 
                 const descriptionIndex = columns.findIndex(function (column) {
+                    const label = String(column.label || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+                    return amountColumnRole(column) !== "auto_amount"
+                        && /^(description|item description|product name|item name|particular|particulars)$/.test(label);
+                });
+                const fallbackProductIndex = columns.findIndex(function (column) {
                     const label = String(column.label || "").toLowerCase();
                     return amountColumnRole(column) !== "auto_amount"
                         && /description|product|item|particular|name/.test(label);
@@ -2027,7 +2032,9 @@ document.addEventListener(
                 const firstVisibleIndex = columns.findIndex(function (column) {
                     return amountColumnRole(column) !== "auto_amount";
                 });
-                const targetColumnIndex = descriptionIndex >= 0 ? descriptionIndex : Math.max(0, firstVisibleIndex);
+                const targetColumnIndex = descriptionIndex >= 0
+                    ? descriptionIndex
+                    : (fallbackProductIndex >= 0 ? fallbackProductIndex : Math.max(0, firstVisibleIndex));
                 const productCell = tr.children[targetColumnIndex + 1];
                 if (productCell) productCell.appendChild(productWrap);
 
