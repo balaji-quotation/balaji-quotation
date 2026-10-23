@@ -18,9 +18,15 @@ catch (InvalidArgumentException $e) { header('Location: add.php?msg=error'); exi
 $rate = $rateInput === '' ? 0.0 : (float)$rateInput;
 $code = 'PM-' . date('ymdHis') . '-' . strtoupper(bin2hex(random_bytes(6)));
 $customJson = json_encode($custom, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-$stmt = $conn->prepare("INSERT INTO products (company_id, product_code, product_name, default_rate, part_number, drawing_number, revision_no, pricing_type, unit, weight_per_piece, material, quantity, priority, status, drawing_file, product_image, remarks, description, custom_fields_json) VALUES (?, ?, ?, ?, '', '', '00', 'PCS', 'PCS', 0, '', 0, 'Low', 'Received', '', '', '', ?, ?)");
-$stmt->bind_param('issdss', $companyId, $code, $name, $rate, $description, $customJson);
-$stmt->execute();
-$stmt->close();
+try {
+    $stmt = $conn->prepare("INSERT INTO products (company_id, product_code, product_name, default_rate, part_number, drawing_number, revision_no, pricing_type, unit, weight_per_piece, material, quantity, priority, status, drawing_file, product_image, remarks, description, custom_fields_json) VALUES (?, ?, ?, ?, '', '', '00', 'PCS', 'PCS', 0, '', 0, 'Low', 'Received', '', '', '', ?, ?)");
+    $stmt->bind_param('issdss', $companyId, $code, $name, $rate, $description, $customJson);
+    $stmt->execute();
+    $stmt->close();
+} catch (Throwable $error) {
+    error_log('Product Master save failed: ' . $error->getMessage());
+    header('Location: add.php?msg=error');
+    exit;
+}
 header('Location: index.php?msg=added');
 exit;
