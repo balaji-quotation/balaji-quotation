@@ -31,7 +31,8 @@ $error = $_SESSION['admin_user_error'] ?? ''; unset($_SESSION['admin_user_error'
             <div class="col-md-6 mb-3"><label class="form-label">Login email *</label><input class="form-control" type="email" name="email" required maxlength="100" value="<?= adminEditEscape($user['email']) ?>"></div>
             <div class="col-md-4 mb-3"><label class="form-label">Role</label><select class="form-select" name="role"><?php foreach (['Administrator','Manager','Production','Quality','Dispatch','Accounts','User'] as $role) { ?><option value="<?= $role ?>" <?= $user['role'] === $role ? 'selected' : '' ?>><?= $role ?></option><?php } ?></select></div>
             <div class="col-md-4 mb-3"><label class="form-label">Status</label><select class="form-select" name="status"><?php foreach (['Active','Inactive'] as $status) { ?><option value="<?= $status ?>" <?= $user['status'] === $status ? 'selected' : '' ?>><?= $status ?></option><?php } ?></select></div>
-            <div class="col-md-4 mb-3"><label class="form-label">Assigned template *</label><select class="form-select" name="template_version_id" id="template_version_id" required><?php while ($template = $templates->fetch_assoc()) { $fieldConfig = json_decode((string)$template['config_json'], true); $fieldLabels = array_values(array_filter(array_map(static fn($field) => (string)($field['label'] ?? ''), is_array($fieldConfig['columns'] ?? null) ? $fieldConfig['columns'] : []))); ?><option value="<?= (int)$template['version_id'] ?>" data-fields="<?= adminEditEscape(json_encode($fieldLabels, JSON_UNESCAPED_UNICODE)) ?>" <?= (int)$user['assigned_template_version_id'] === (int)$template['version_id'] ? 'selected' : '' ?>><?= adminEditEscape($template['template_name']) ?> · v<?= (int)$template['version_number'] ?></option><?php } ?></select><small class="text-muted">Quotation item fields are controlled by this assigned template.</small><div id="assignedTemplateFields" class="small text-primary mt-1"></div></div>
+            <div class="col-md-4 mb-3"><label class="form-label">Assigned template *</label><select class="form-select" name="template_version_id" id="template_version_id" required><?php while ($template = $templates->fetch_assoc()) { $fieldConfig = json_decode((string)$template['config_json'], true); $fieldLabels = array_values(array_filter(array_map(static fn($field) => (string)($field['label'] ?? ''), is_array($fieldConfig['columns'] ?? null) ? $fieldConfig['columns'] : []))); ?><option value="<?= (int)$template['version_id'] ?>" data-config="<?= adminEditEscape((string)$template['config_json']) ?>" <?= (int)$user['assigned_template_version_id'] === (int)$template['version_id'] ? 'selected' : '' ?>><?= adminEditEscape($template['template_name']) ?> · v<?= (int)$template['version_number'] ?></option><?php } ?></select><small class="text-muted">Quotation item fields are controlled by this assigned template.</small><div class="small text-muted mt-1">Choose which quotation fields this user can use:</div><div id="quotationFieldChoices" class="vstack gap-1 mt-2"></div></div>
+            <div class="col-md-6 mb-3"><label class="form-label">Quotation print design *</label><select class="form-select" name="print_layout" id="print_layout" required><option value="Classic">Classic</option><option value="Compact">Compact</option><option value="Minimal">Minimal</option><option value="Modern">Modern</option></select><small class="text-muted">This design applies to new quotations; earlier quotations keep their saved design.</small></div>
             <div class="col-md-6 mb-3"><label class="form-label">Reset password</label><input class="form-control" type="password" name="password" minlength="12" autocomplete="new-password"><small class="text-muted">Leave blank to keep the current password.</small></div>
         </div></div></div>
         <div class="card mt-3"><div class="card-header"><h5 class="mb-0">Modules and actions for this user</h5><small class="text-muted">Unchecked actions are blocked, including direct page access. Quotation fields come from the assigned template above.</small></div><div class="card-body"><div class="row">
@@ -49,19 +50,40 @@ $error = $_SESSION['admin_user_error'] ?? ''; unset($_SESSION['admin_user_error'
 <script>
 (function () {
     var select = document.getElementById('template_version_id');
-    var preview = document.getElementById('assignedTemplateFields');
-    if (!select || !preview) return;
-    function showFields() {
+    var fieldChoices = document.getElementById('quotationFieldChoices');
+    var layoutSelect = document.getElementById('print_layout');
+    if (!select || !fieldChoices) return;
+    function renderTemplateSettings() {
         var option = select.options[select.selectedIndex];
         try {
-            var fields = JSON.parse(option.getAttribute('data-fields') || '[]');
-            preview.textContent = fields.length ? 'Assigned quotation fields: ' + fields.join(', ') : 'This template has no quotation item fields.';
+            var config = JSON.parse(option.getAttribute('data-config') || '{}');
+            var columns = Array.isArray(config.columns) ? config.columns : [];
+            fieldChoices.replaceChildren();
+            columns.forEach(function (column, index) {
+                var label = document.createElement('label');
+                label.className = 'form-check small';
+                var checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = 'quotation_fields[]';
+                checkbox.value = String(index);
+                checkbox.className = 'form-check-input';
+                checkbox.checked = true;
+                var text = document.createElement('span');
+                text.className = 'form-check-label';
+                text.textContent = String(column.label || ('Field ' + (index + 1)));
+                label.appendChild(checkbox);
+                label.appendChild(text);
+                fieldChoices.appendChild(label);
+            });
+            if (layoutSelect && ['Classic','Compact','Minimal','Modern'].includes(config.print_layout)) {
+                layoutSelect.value = config.print_layout;
+            }
         } catch (e) {
-            preview.textContent = 'The template fields could not be previewed.';
+            fieldChoices.textContent = 'The template settings could not be loaded.';
         }
     }
-    select.addEventListener('change', showFields);
-    showFields();
+    select.addEventListener('change', renderTemplateSettings);
+    renderTemplateSettings();
 })();
 </script>
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
