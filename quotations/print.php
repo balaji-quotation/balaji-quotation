@@ -461,6 +461,13 @@ while (
         $column;
 }
 
+foreach ($columns as $columnIndex => &$column) {
+    $savedColumnConfig = is_array($templateConfig['columns'][$columnIndex] ?? null) ? $templateConfig['columns'][$columnIndex] : [];
+    $column['field_role'] = $savedColumnConfig['field_role'] ?? 'none';
+    $column['data_type'] = $savedColumnConfig['type'] ?? ($column['data_type'] ?? 'text');
+}
+unset($column);
+
 mysqli_stmt_close(
     $column_stmt
 );
@@ -690,7 +697,8 @@ $taxAmount = $gstEnabled && $totalsCalculable
 $grandTotal = $totalsCalculable
     ? quotationTemplateRound($subtotal + $taxAmount, $decimalPlaces, $roundingMode)
     : 0.0;
-$showLineAmount = !empty($totalsConfig['show_line_amount']) && $totalsCalculable;
+$hasAutoAmountColumn = count(array_filter($columns, static fn($column) => ($column['field_role'] ?? '') === 'auto_amount' || ($column['data_type'] ?? '') === 'auto_amount')) > 0;
+$showLineAmount = !empty($totalsConfig['show_line_amount']) && $totalsCalculable && !$hasAutoAmountColumn;
 $showSubtotal = !empty($totalsConfig['show_subtotal']);
 $showTax = !empty($totalsConfig['show_tax'] ?? $totalsConfig['show_total'] ?? false) && $gstEnabled;
 $showGrandTotal = !empty($totalsConfig['show_grand_total']);
