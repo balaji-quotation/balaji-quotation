@@ -1319,9 +1319,10 @@ document.addEventListener(
 
 
 
-        const showLineAmount = Object.prototype.hasOwnProperty.call(totalsConfig, "show_line_amount")
+        const hasAutoAmountColumn = columns.some(function (column) { return amountColumnRole(column) === "auto_amount"; });
+        const showLineAmount = (Object.prototype.hasOwnProperty.call(totalsConfig, "show_line_amount")
             ? !!totalsConfig.show_line_amount
-            : true;
+            : true) && !hasAutoAmountColumn;
         const showSubtotal = !!totalsConfig.show_subtotal;
         const showTax = !!(totalsConfig.show_tax ?? totalsConfig.show_total) && !!taxConfig.gst_enabled;
         const showGrandTotal = !!totalsConfig.show_grand_total;
@@ -1329,6 +1330,11 @@ document.addEventListener(
         const totalsFoot = document.getElementById("quotationTotals");
 
         function amountColumnRole(column) {
+            const configuredRole = String(column.field_role || column.role || "").toLowerCase();
+            if (configuredRole === "qty" || configuredRole === "quantity") return "qty";
+            if (configuredRole === "rate" || configuredRole === "price") return "rate";
+            if (configuredRole === "amount") return "amount";
+            if (configuredRole === "auto_amount" || column.type === "auto_amount") return "auto_amount";
             const label = String(column.label || column.column_label || "")
                 .toLowerCase()
                 .replace(/\([^)]*\)/g, " ")
@@ -1410,7 +1416,7 @@ document.addEventListener(
             const variables = {qty:null, rate:null, amount:null};
             columns.forEach(function (column, index) {
                 const role = amountColumnRole(column);
-                if (role) variables[role] = amountNumericValue(values[index]);
+                if (role && role !== "auto_amount") variables[role] = amountNumericValue(values[index]);
             });
             const mode = String(calculationConfig.mode || "standard");
             if (mode === "custom") {
