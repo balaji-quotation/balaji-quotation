@@ -249,12 +249,18 @@ function erpPermissionMap()
             'Production',
             'Quality',
             'Dispatch',
-            'Accounts'
+            'Accounts',
+            'User'
         ],
 
         'products.add' => [
             'Administrator',
-            'Manager'
+            'Manager',
+            'Production',
+            'Quality',
+            'Dispatch',
+            'Accounts',
+            'User'
         ],
 
         'products.edit' => [
