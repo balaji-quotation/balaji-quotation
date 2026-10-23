@@ -2,8 +2,8 @@
 declare(strict_types=1);
 
 /**
- * Enforce company-scoped quotation number uniqueness.
- * Default mode is a read-only preflight. Existing quotation rows are not changed.
+ * Enforce company-scoped quotation number uniqueness and configure the first sequence.
+ * Default mode is read-only. Existing quotation rows are never rewritten.
  *
  * Usage:
  *   php tools/migrate_quotation_number_unique.php
@@ -36,7 +36,7 @@ if (($backupVerified || $maintenanceConfirmed) && !$apply) {
     exit(2);
 }
 if ($apply && (!$backupVerified || !$maintenanceConfirmed)) {
-    fwrite(STDERR, "Refusing to apply: require --apply, --backup-verified, and --maintenance-confirmed after owner approval and a verified restorable backup.\n");
+    fwrite(STDERR, "Refusing to apply: require --apply, --backup-verified, and --maintenance-confirmed after a verified restorable backup and maintenance confirmation.\n");
     exit(2);
 }
 
@@ -76,10 +76,17 @@ function quotationUniqueIndexDetails(mysqli $db): ?array
     return $result->fetch_assoc() ?: null;
 }
 
-if (!quotationUniqueColumnExists($conn, 'company_id') || !quotationUniqueColumnExists($conn, 'quotation_no')) {
+if (!quotationUniqueTableExists($conn, 'quotations')
+    || !quotationUniqueColumnExists($conn, 'quotations', 'company_id')
+    || !quotationUniqueColumnExists($conn, 'quotations', 'quotation_no')) {
     fwrite(STDERR, "Preflight failed: quotations.company_id or quotations.quotation_no is missing. Run the SaaS tenant migration first. No changes made.\n");
     exit(3);
 }
+if (!quotationUniqueTableExists($conn, 'quotation_company_settings')) {
+    fwrite(STDERR, "Preflight failed: quotation_company_settings table is missing. Run the SaaS tenant migration first. No changes made.\n");
+    exit(3);
+}
+$startingNumberColumnExists = quotationUniqueColumnExists($conn, 'quotation_company_settings', 'quotation_start_number');
 
 $countResult = $conn->query('SELECT COUNT(*) AS n FROM quotations');
 $rowCount = (int)($countResult->fetch_assoc()['n'] ?? 0);
@@ -102,6 +109,7 @@ echo "Database: " . (string)($conn->query('SELECT DATABASE() AS db_name')->fetch
 echo "Quotation rows: {$rowCount}\n";
 echo "Duplicate company/number groups: {$duplicateGroups}\n";
 echo "Unique index: " . ($hasExpectedIndex ? 'already present' : 'will be added') . "\n";
+echo "Starting quotation number: " . ($startingNumberColumnExists ? 'already configurable' : 'will default to 1 for existing companies') . "\n";
 
 if ($duplicateGroups > 0 && !$hasExpectedIndex) {
     fwrite(STDERR, "Preflight blocked: existing duplicate quotation numbers must be reviewed and corrected before applying this migration. No changes made.\n");
@@ -123,7 +131,7 @@ if (!$hasExpectedIndex) {
     $conn->query('ALTER TABLE quotations ADD UNIQUE KEY uq_quotations_company_number (company_id, quotation_no)');
 }
 if (!quotationUniqueColumnExists($conn, 'quotation_company_settings', 'quotation_start_number')) {
-    fwrite(STDERR, "Postflight failed: quotation_start_number column was not created.\\n");
+    fwrite(STDERR, "Postflight failed: quotation_start_number column was not created.\n");
     exit(4);
 }
 $afterCount = (int)($conn->query('SELECT COUNT(*) AS n FROM quotations')->fetch_assoc()['n'] ?? 0);
@@ -131,8 +139,11 @@ if ($afterCount !== $rowCount) {
     fwrite(STDERR, "Postflight failed: quotation row count changed from {$rowCount} to {$afterCount}. Inspect the database before continuing.\n");
     exit(4);
 }
-if (!quotationUniqueIndexDetails($conn)) {
-    fwrite(STDERR, "Postflight failed: unique quotation number index is missing.\n");
+$postflightIndex = quotationUniqueIndexDetails($conn);
+if (!$postflightIndex
+    || (string)$postflightIndex['columns_list'] !== 'company_id,quotation_no'
+    || (int)$postflightIndex['non_unique'] !== 0) {
+    fwrite(STDERR, "Postflight failed: expected unique quotation number index is missing.\n");
     exit(4);
 }
 echo "Company-scoped quotation number uniqueness is enforced. Existing rows are unchanged ({$afterCount}).\n";
