@@ -14,6 +14,8 @@ erpRequireCompanyUser($conn);
 erpRequire('products.delete');
 $companyId = erpCurrentCompanyId();
 
+try {
+
 
 // =====================================================
 // ONLY POST REQUEST
@@ -263,5 +265,10 @@ if ($product_image !== '') {
 
 header("Location: index.php?msg=deleted");
 exit;
+} catch (Throwable $error) {
+    error_log("Product delete failed: " . $error->getMessage());
+    header("Location: index.php?msg=db_error");
+    exit;
+}
 
 ?>
