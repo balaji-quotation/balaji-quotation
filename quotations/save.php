@@ -731,6 +731,27 @@ mysqli_begin_transaction(
 
 try {
 
+    // Serialize number allocation within this company. The database unique
+    // index remains the final guard against duplicate numbers.
+    $company_lock_stmt = mysqli_prepare(
+        $conn,
+        "SELECT id FROM companies WHERE id = ? FOR UPDATE"
+    );
+    if (!$company_lock_stmt) {
+        throw new Exception("Could not lock the company quotation sequence.");
+    }
+    mysqli_stmt_bind_param($company_lock_stmt, "i", $companyId);
+    if (!mysqli_stmt_execute($company_lock_stmt)) {
+        mysqli_stmt_close($company_lock_stmt);
+        throw new Exception("Could not lock the company quotation sequence.");
+    }
+    mysqli_stmt_store_result($company_lock_stmt);
+    $company_exists = mysqli_stmt_num_rows($company_lock_stmt) === 1;
+    mysqli_stmt_close($company_lock_stmt);
+    if (!$company_exists) {
+        throw new Exception("The company account is no longer available.");
+    }
+
     // =================================================
     // DUPLICATE QUOTATION NO. CHECK
     // =================================================
@@ -1398,7 +1419,10 @@ try {
 
 
     $_SESSION['quotation_error'] =
-        "Quotation could not be saved. Please try again.";
+        (str_contains(strtolower($e->getMessage()), 'duplicate')
+            || str_contains(strtolower($e->getMessage()), 'already exists'))
+            ? "This quotation number is already in use. Reload the form to get the next number, then try again."
+            : "Quotation could not be saved. Please try again.";
 
 
     header(
