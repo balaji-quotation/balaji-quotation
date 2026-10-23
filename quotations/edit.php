@@ -487,6 +487,47 @@ unset($_SESSION['quotation_error']);
     font-weight: 600;
 }
 
+.quote-section-title {
+    font-size: 16px;
+}
+
+.quote-section-note {
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.quote-form-label {
+    font-size: 12px;
+}
+
+.quote-table tbody td:first-child {
+    color: #526173;
+    font-weight: 700;
+}
+
+.quote-table-wrap::-webkit-scrollbar {
+    height: 9px;
+}
+
+.quote-table-wrap::-webkit-scrollbar-thumb {
+    background: #c8d3e0;
+    border-radius: 10px;
+}
+
+@media (max-width: 767.98px) {
+    .quote-card .card-body {
+        padding: 14px;
+    }
+
+    .quote-table {
+        min-width: 850px;
+    }
+
+    #addRowBtn {
+        width: 100%;
+    }
+}
+
 .term-table {
     font-size: 11px;
 }
