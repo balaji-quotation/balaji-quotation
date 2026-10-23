@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../includes/permissions.php';
 erpRequire('superadmin.users');
 require_once __DIR__ . '/../../includes/db.php';
 $companies = $conn->query("SELECT id, company_name, subscription_plan FROM companies WHERE status = 'Active' ORDER BY company_name");
+$companyRows = $companies->fetch_all(MYSQLI_ASSOC);
 $templates = $conn->query(
     "SELECT t.company_id, c.company_name, t.template_name, v.id AS version_id, v.version_number, v.config_json
      FROM quotation_templates t
@@ -24,8 +25,8 @@ $error = $_SESSION['admin_user_error'] ?? ''; unset($_SESSION['admin_user_error'
     <?php if ($error !== '') { ?><div class="alert alert-danger"><?= adminAddEscape($error) ?></div><?php } ?>
     <form method="post" action="save.php" autocomplete="off" id="userForm"><input type="hidden" name="csrf_token" value="<?= adminAddEscape($_SESSION['csrf_token']) ?>">
         <div class="card"><div class="card-body"><div class="row">
-            <div class="col-md-6 mb-3"><label class="form-label">Company *</label><select name="company_id" id="company_id" class="form-select" required><option value="">Choose company</option><?php while ($company = $companies->fetch_assoc()) { ?><option value="<?= (int)$company['id'] ?>"><?= adminAddEscape($company['company_name']) ?> · <?= adminAddEscape($company['subscription_plan'] ?? 'Plan not set') ?></option><?php } ?></select></div>
-            <div class="col-md-6 mb-3"><label class="form-label">Assigned template version *</label><select name="template_version_id" id="template_version_id" class="form-select" required disabled><option value="">Choose company first</option><?php while ($template = $templates->fetch_assoc()) { $fieldConfig = json_decode((string)$template['config_json'], true); $fieldLabels = array_values(array_filter(array_map(static fn($field) => (string)($field['label'] ?? ''), is_array($fieldConfig['columns'] ?? null) ? $fieldConfig['columns'] : []))); ?><option value="<?= (int)$template['version_id'] ?>" data-company-id="<?= (int)$template['company_id'] ?>" data-config="<?= adminAddEscape((string)$template['config_json']) ?>"><?= adminAddEscape($template['company_name']) ?> · <?= adminAddEscape($template['template_name']) ?> · v<?= (int)$template['version_number'] ?></option><?php } ?></select><small class="text-muted">This template assigns the quotation fields available to this user.</small><div class="small text-muted mt-1">Customize the user's quotation table. Add, edit, remove, or reorder fields:</div><div id="quotationFieldBuilder" class="vstack gap-2 mt-2"></div><div id="quotationFieldError" class="small text-danger mt-1"></div><button class="btn btn-outline-primary btn-sm mt-2" type="button" id="addQuotationField">+ Add quotation field</button><textarea class="d-none" name="quotation_columns_json" id="quotationColumnsJson"></textarea></div>
+            <div class="col-md-6 mb-3"><label class="form-label" for="company_name">Company name *</label><input class="form-control" type="text" name="company_name" id="company_name" maxlength="255" autocomplete="organization" placeholder="Type the company name" required><small class="text-muted" id="companyNameHelp">Type the exact name of an active company. Template assignment will match this company.</small></div>
+            <div class="col-md-6 mb-3"><label class="form-label">Assigned template version *</label><select name="template_version_id" id="template_version_id" class="form-select" required disabled><option value="">Choose company first</option><?php while ($template = $templates->fetch_assoc()) { $fieldConfig = json_decode((string)$template['config_json'], true); $fieldLabels = array_values(array_filter(array_map(static fn($field) => (string)($field['label'] ?? ''), is_array($fieldConfig['columns'] ?? null) ? $fieldConfig['columns'] : []))); ?><option value="<?= (int)$template['version_id'] ?>" data-company-id="<?= (int)$template['company_id'] ?>" data-company-name="<?= adminAddEscape($template['company_name']) ?>" data-config="<?= adminAddEscape((string)$template['config_json']) ?>"><?= adminAddEscape($template['company_name']) ?> · <?= adminAddEscape($template['template_name']) ?> · v<?= (int)$template['version_number'] ?></option><?php } ?></select><small class="text-muted">This template assigns the quotation fields available to this user.</small><div class="small text-muted mt-1">Customize the user's quotation table. Add, edit, remove, or reorder fields:</div><div id="quotationFieldBuilder" class="vstack gap-2 mt-2"></div><div id="quotationFieldError" class="small text-danger mt-1"></div><button class="btn btn-outline-primary btn-sm mt-2" type="button" id="addQuotationField">+ Add quotation field</button><textarea class="d-none" name="quotation_columns_json" id="quotationColumnsJson"></textarea></div>
             <div class="col-md-6 mb-3"><label class="form-label">Quotation print design *</label><select class="form-select" name="print_layout" id="print_layout" required><option value="Classic">Classic</option><option value="Compact">Compact</option><option value="Minimal">Minimal</option><option value="Modern">Modern</option></select><small class="text-muted">This design is saved for this user's quotations. Earlier quotations keep their saved design.</small></div>
             <div class="col-md-4 mb-3"><label class="form-label">Full name *</label><input class="form-control" name="name" maxlength="100" required></div>
             <div class="col-md-4 mb-3"><label class="form-label">Login email *</label><input class="form-control" name="email" type="email" maxlength="100" required></div>
@@ -47,14 +48,16 @@ $error = $_SESSION['admin_user_error'] ?? ''; unset($_SESSION['admin_user_error'
 </div></div></div>
 <script>
 (function () {
-    var companySelect = document.getElementById('company_id');
+    var companyInput = document.getElementById('company_name');
+    var companyNameHelp = document.getElementById('companyNameHelp');
+    var companyRows = <?= json_encode(array_map(static fn($company) => ['id' => (int)$company['id'], 'name' => (string)$company['company_name']], $companyRows), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
     var templateSelect = document.getElementById('template_version_id');
     var fieldBuilder = document.getElementById('quotationFieldBuilder');
     var fieldJson = document.getElementById('quotationColumnsJson');
     var layoutSelect = document.getElementById('print_layout');
     var form = document.getElementById('userForm');
     var errorBox = document.getElementById('quotationFieldError');
-    if (!companySelect || !templateSelect || !fieldBuilder || !fieldJson || !form) return;
+    if (!companyInput || !templateSelect || !fieldBuilder || !fieldJson || !form) return;
     var options = Array.prototype.slice.call(templateSelect.options);
 
     function makeControl(className, labelText, value, options) {
@@ -194,7 +197,11 @@ $error = $_SESSION['admin_user_error'] ?? ''; unset($_SESSION['admin_user_error'
     });
 
     function filterTemplates() {
-        var companyId = companySelect.value;
+        var typedName = companyInput.value.trim().toLocaleLowerCase();
+        var matches = companyRows.filter(function (company) {
+            return company.name.trim().toLocaleLowerCase() === typedName;
+        });
+        var companyId = matches.length === 1 ? String(matches[0].id) : '';
         templateSelect.value = '';
         templateSelect.disabled = !companyId;
         fieldBuilder.replaceChildren();
@@ -204,9 +211,19 @@ $error = $_SESSION['admin_user_error'] ?? ''; unset($_SESSION['admin_user_error'
             option.hidden = !allowed;
             option.disabled = !allowed;
         });
-        templateSelect.options[0].textContent = companyId ? 'Choose template' : 'Choose company first';
+        templateSelect.options[0].textContent = companyId ? 'Choose template' : 'Type an active company name first';
+        if (!typedName) {
+            companyNameHelp.textContent = 'Type the exact name of an active company. Template assignment will match this company.';
+            companyNameHelp.classList.remove('text-danger');
+        } else if (!companyId) {
+            companyNameHelp.textContent = 'No unique active company matches this name. Check the spelling and try again.';
+            companyNameHelp.classList.add('text-danger');
+        } else {
+            companyNameHelp.textContent = 'Company matched. Choose one of its active quotation templates.';
+            companyNameHelp.classList.remove('text-danger');
+        }
     }
-    companySelect.addEventListener('change', filterTemplates);
+    companyInput.addEventListener('input', filterTemplates);
     templateSelect.addEventListener('change', renderTemplateSettings);
     filterTemplates();
 })();

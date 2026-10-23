@@ -9,16 +9,19 @@ function adminUserFail(string $message): never { $_SESSION['admin_user_error'] =
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { header('Location: index.php'); exit; }
 $token = (string)($_POST['csrf_token'] ?? '');
 if (empty($_SESSION['csrf_token']) || $token === '' || !hash_equals($_SESSION['csrf_token'], $token)) adminUserFail('Request expired. Reload and try again.');
-$companyId = filter_var($_POST['company_id'] ?? null, FILTER_VALIDATE_INT);
+$companyName = mb_substr(trim((string)($_POST['company_name'] ?? '')), 0, 255, 'UTF-8');
 $templateVersionId = filter_var($_POST['template_version_id'] ?? null, FILTER_VALIDATE_INT);
 $name = mb_substr(trim((string)($_POST['name'] ?? '')), 0, 100, 'UTF-8');
 $email = mb_substr(strtolower(trim((string)($_POST['email'] ?? ''))), 0, 100, 'UTF-8');
 $password = (string)($_POST['password'] ?? '');
 $role = trim((string)($_POST['role'] ?? 'User'));
 $roles = ['Administrator','Manager','Production','Quality','Dispatch','Accounts','User'];
-if (!$companyId || $companyId < 1 || !$templateVersionId || $templateVersionId < 1 || $name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($password) < 12 || !in_array($role, $roles, true)) adminUserFail('Check the company, template, name, email, role, and minimum 12-character password.');
-$company = $conn->prepare("SELECT id, subscription_plan, status FROM companies WHERE id = ? LIMIT 1");
-$company->bind_param('i', $companyId); $company->execute(); $companyRow = $company->get_result()->fetch_assoc(); $company->close();
+if ($companyName === '' || !$templateVersionId || $templateVersionId < 1 || $name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($password) < 12 || !in_array($role, $roles, true)) adminUserFail('Check the company name, template, name, email, role, and minimum 12-character password.');
+$company = $conn->prepare("SELECT id, subscription_plan, status FROM companies WHERE LOWER(TRIM(company_name)) = LOWER(?) AND status = 'Active' ORDER BY id LIMIT 2");
+$company->bind_param('s', $companyName); $company->execute(); $companyRows = $company->get_result()->fetch_all(MYSQLI_ASSOC); $company->close();
+if (count($companyRows) !== 1) adminUserFail('Enter an exact company name that matches one active company.');
+$companyRow = $companyRows[0];
+$companyId = (int)$companyRow['id'];
 if (!$companyRow || $companyRow['status'] !== 'Active') adminUserFail('Choose an active company.');
 $limit = $companyRow['subscription_plan'] === 'Premium' ? 2 : ($companyRow['subscription_plan'] === 'Business' ? 1 : 0);
 if ($limit === 0) adminUserFail('Set the company plan in Subscriptions before creating users.');
