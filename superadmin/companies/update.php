@@ -32,11 +32,12 @@ $city = trim((string)($_POST['city'] ?? ''));
 $state = trim((string)($_POST['state'] ?? ''));
 $pincode = trim((string)($_POST['pincode'] ?? ''));
 $quotationNumberFormat = trim((string)($_POST['quotation_prefix'] ?? ''));
+$quotationStartingNumber = filter_var($_POST['quotation_start_number'] ?? '1', FILTER_VALIDATE_INT);
 $status = trim((string)($_POST['status'] ?? ''));
 $allowedStatus = ['Active', 'Inactive', 'Suspended'];
 
-if (!$id || $id < 1 || $name === '' || ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) || !in_array($status, $allowedStatus, true) || !quotationNumberPatternIsValid($quotationNumberFormat)) {
-    $_SESSION['company_error'] = 'Check the company name, email, status, and quotation number format.';
+if (!$id || $id < 1 || $name === '' || ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) || !in_array($status, $allowedStatus, true) || !quotationNumberPatternIsValid($quotationNumberFormat) || $quotationStartingNumber === false || $quotationStartingNumber < 1 || $quotationStartingNumber > 2147483647) {
+    $_SESSION['company_error'] = 'Check the company name, email, status, quotation number format, and starting number.';
     header('Location: ' . ($id ? 'edit.php?id=' . $id : 'index.php'));
     exit;
 }
@@ -101,7 +102,8 @@ $stmt->close();
         $city,
         $state,
         $pincode,
-        $quotationNumberFormat
+        $quotationNumberFormat,
+        $quotationStartingNumber
     );
     $conn->commit();
 } catch (Throwable $error) {
