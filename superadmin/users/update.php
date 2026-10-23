@@ -47,7 +47,18 @@ if ($password !== '') {
     $stmt = $conn->prepare('UPDATE users SET name=?, email=?, role=?, status=?, assigned_template_version_id=? WHERE id=? AND company_id=?');
     $stmt->bind_param('ssssiii', $name, $email, $role, $status, $templateVersionId, $id, $companyId);
 }
-$stmt->execute(); $stmt->close();
+require_once __DIR__ . '/../../includes/user_permissions.php';
+try {
+    $conn->begin_transaction();
+    $stmt->execute();
+    $stmt->close();
+    erpSaveUserPermissionOverrides($conn, $id, $_POST['permissions'] ?? []);
+    $conn->commit();
+} catch (Throwable $e) {
+    $conn->rollback();
+    error_log('Company user update failed: ' . $e->getMessage());
+    adminEditFail('User access could not be saved. Run the user-permissions migration, then try again.', $id);
+}
 $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 header('Location: index.php?updated=1');
 exit;
