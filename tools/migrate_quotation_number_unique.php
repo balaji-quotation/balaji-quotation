@@ -40,10 +40,20 @@ if ($apply && (!$backupVerified || !$maintenanceConfirmed)) {
     exit(2);
 }
 
-function quotationUniqueColumnExists(mysqli $db, string $column): bool
+function quotationUniqueTableExists(mysqli $db, string $table): bool
+{
+    $stmt = $db->prepare('SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ? LIMIT 1');
+    $stmt->bind_param('s', $table);
+    $stmt->execute();
+    $stmt->store_result();
+    $exists = $stmt->num_rows > 0;
+    $stmt->close();
+    return $exists;
+}
+
+function quotationUniqueColumnExists(mysqli $db, string $table, string $column): bool
 {
     $stmt = $db->prepare('SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ? LIMIT 1');
-    $table = 'quotations';
     $stmt->bind_param('ss', $table, $column);
     $stmt->execute();
     $stmt->store_result();
@@ -106,8 +116,15 @@ if (!$apply) {
     exit(0);
 }
 
+if (!$startingNumberColumnExists) {
+    $conn->query('ALTER TABLE quotation_company_settings ADD COLUMN quotation_start_number INT UNSIGNED NOT NULL DEFAULT 1');
+}
 if (!$hasExpectedIndex) {
     $conn->query('ALTER TABLE quotations ADD UNIQUE KEY uq_quotations_company_number (company_id, quotation_no)');
+}
+if (!quotationUniqueColumnExists($conn, 'quotation_company_settings', 'quotation_start_number')) {
+    fwrite(STDERR, "Postflight failed: quotation_start_number column was not created.\\n");
+    exit(4);
 }
 $afterCount = (int)($conn->query('SELECT COUNT(*) AS n FROM quotations')->fetch_assoc()['n'] ?? 0);
 if ($afterCount !== $rowCount) {
