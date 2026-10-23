@@ -69,10 +69,10 @@ function quotationFormatNumber(string $pattern, string $financialYear, int $year
  * Return the next sequence for this company's current number format.
  * Sequence is derived from existing quotation numbers, never from global row IDs.
  */
-function quotationNextSequence(mysqli $db, int $companyId, string $pattern, string $financialYear, int $year): int
+function quotationNextSequence(mysqli $db, int $companyId, string $pattern, string $financialYear, int $year, int $startingNumber = 1): int
 {
     if ($companyId < 1 || !quotationNumberPatternIsValid($pattern)) {
-        return 1;
+        return max(1, $startingNumber);
     }
 
     $pattern = trim($pattern);
@@ -148,5 +148,5 @@ function quotationNextSequence(mysqli $db, int $companyId, string $pattern, stri
     }
     $stmt->close();
 
-    return $maximum + 1;
+    return max(max(1, $startingNumber), $maximum + 1);
 }
