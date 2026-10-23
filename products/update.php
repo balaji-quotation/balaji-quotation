@@ -14,20 +14,30 @@ $name = trim((string)($_POST['product_name'] ?? ''));
 $description = trim((string)($_POST['description'] ?? ''));
 $rateInput = trim((string)($_POST['default_rate'] ?? ''));
 if ($id <= 0 || $name === '' || mb_strlen($name) > 255 || mb_strlen($description) > 5000 || ($rateInput !== '' && (!is_numeric($rateInput) || (float)$rateInput < 0))) { header('Location: index.php?msg=error'); exit; }
-$check = $conn->prepare('SELECT custom_fields_json FROM products WHERE id = ? AND company_id = ? LIMIT 1');
-$check->bind_param('ii', $id, $companyId);
-$check->execute();
-$old = $check->get_result()->fetch_assoc();
-$check->close();
-if (!$old) { http_response_code(404); exit('Product not found.'); }
-$existing = productMasterDecodeValues($old['custom_fields_json'] ?? null);
-try { $custom = productMasterNormalizeCustomFields($conn, is_array($_POST['custom_fields'] ?? null) ? $_POST['custom_fields'] : [], $existing); }
-catch (InvalidArgumentException $e) { header('Location: edit.php?id=' . $id . '&msg=error'); exit; }
-$rate = $rateInput === '' ? 0.0 : (float)$rateInput;
-$customJson = json_encode($custom, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-$update = $conn->prepare('UPDATE products SET product_name = ?, description = ?, default_rate = ?, custom_fields_json = ? WHERE id = ? AND company_id = ?');
-$update->bind_param('ssdsii', $name, $description, $rate, $customJson, $id, $companyId);
-$update->execute();
-$update->close();
+try {
+    $check = $conn->prepare('SELECT custom_fields_json FROM products WHERE id = ? AND company_id = ? LIMIT 1');
+    $check->bind_param('ii', $id, $companyId);
+    $check->execute();
+    $old = $check->get_result()->fetch_assoc();
+    $check->close();
+    if (!$old) { http_response_code(404); exit('Product not found.'); }
+    $existing = productMasterDecodeValues($old['custom_fields_json'] ?? null);
+    try { $custom = productMasterNormalizeCustomFields($conn, is_array($_POST['custom_fields'] ?? null) ? $_POST['custom_fields'] : [], $existing); }
+    catch (InvalidArgumentException $e) { header('Location: edit.php?id=' . $id . '&msg=error'); exit; }
+    $rate = $rateInput === '' ? 0.0 : (float)$rateInput;
+    $customJson = json_encode($custom, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $update = $conn->prepare('UPDATE products SET product_name = ?, description = ?, default_rate = ?, custom_fields_json = ? WHERE id = ? AND company_id = ?');
+    $update->bind_param('ssdsii', $name, $description, $rate, $customJson, $id, $companyId);
+    if (!$update->execute()) {
+        throw new RuntimeException('Product update query failed.');
+    }
+    $update->close();
+
+    
+} catch (Throwable $error) {
+    error_log('Product Master update failed: ' . $error->getMessage());
+    header('Location: edit.php?id=' . $id . '&msg=error');
+    exit;
+}
 header('Location: index.php?msg=updated');
 exit;
