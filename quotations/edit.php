@@ -143,12 +143,14 @@ mysqli_stmt_execute($column_stmt);
 $column_result = mysqli_stmt_get_result($column_stmt);
 
 while ($column = mysqli_fetch_assoc($column_result)) {
-
+    $columnIndex = count($columns);
+    $savedTemplateColumn = is_array($templateConfig['columns'][$columnIndex] ?? null) ? $templateConfig['columns'][$columnIndex] : [];
     $columns[] = [
         'key'   => $column['column_key'],
         'label' => $column['column_label'],
         'unit'  => $column['unit_text'] ?? '',
-        'type'  => $column['data_type'] ?? 'text',
+        'type'  => $savedTemplateColumn['type'] ?? ($column['data_type'] ?? 'text'),
+        'field_role' => $savedTemplateColumn['field_role'] ?? 'none',
         'align' => $column['text_align'] ?? 'left'
     ];
 }
