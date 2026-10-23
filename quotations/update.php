@@ -452,6 +452,11 @@ foreach ($row_data as $row) {
         foreach ($columns as $index => $column) {
             $rowByKey[$column['column_key']] = (string)($clean_row[$index] ?? '');
         }
+        foreach ($columns as $column) {
+            if (($column['field_role'] ?? '') === 'auto_amount' || ($column['type'] ?? '') === 'auto_amount') {
+                $rowByKey[$column['column_key']] = '';
+            }
+        }
         $calculation = is_array($templateSnapshotConfig['calculation'] ?? null) ? $templateSnapshotConfig['calculation'] : ['mode'=>'standard','formula'=>''];
         $computedAmount = quotationTemplateRowAmount($rowByKey, $columns, $calculation);
         if ($computedAmount !== null && is_finite($computedAmount)) {
