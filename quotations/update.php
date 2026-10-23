@@ -798,7 +798,9 @@ try {
             $column['unit'];
 
         $type =
-            $column['type'];
+            $column['type'] === 'auto_amount'
+                ? 'number'
+                : $column['type'];
 
         $align =
             $column['align'];
