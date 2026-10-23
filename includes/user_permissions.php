@@ -102,7 +102,7 @@ function erpCreateUserQuotationTemplate(
     int $adminId,
     int $sourceVersionId,
     int $currentVersionId,
-    $submittedIndexes,
+    string $submittedColumnsJson,
     string $layout
 ): int {
     require_once __DIR__ . '/quotation_template_runtime.php';
@@ -134,23 +134,29 @@ function erpCreateUserQuotationTemplate(
     if (!is_array($config) || !is_array($config['columns'] ?? null)) {
         throw new RuntimeException('The selected quotation template is invalid.');
     }
+    $submittedColumns = json_decode($submittedColumnsJson, true);
+    if (!is_array($submittedColumns) || !array_is_list($submittedColumns) || count($submittedColumns) < 1 || count($submittedColumns) > 20) {
+        throw new RuntimeException('Add between 1 and 20 quotation table fields.');
+    }
 
-    $selected = [];
-    foreach ($submittedIndexes as $rawIndex) {
-        $index = filter_var($rawIndex, FILTER_VALIDATE_INT);
-        if ($index === false || $index < 0 || !array_key_exists($index, $config['columns'])) {
-            throw new RuntimeException('One or more quotation fields are invalid.');
-        }
-        $selected[$index] = true;
-    }
     $columns = [];
-    foreach (array_values($config['columns']) as $index => $column) {
-        if (isset($selected[$index])) {
-            $columns[] = $column;
+    $seenLabels = [];
+    foreach ($submittedColumns as $column) {
+        if (!is_array($column)) {
+            throw new RuntimeException('Each quotation table field must be valid.');
         }
-    }
-    if (!$columns || count($columns) > 20) {
-        throw new RuntimeException('Choose between 1 and 20 quotation fields.');
+        $label = mb_substr(trim((string)($column['label'] ?? '')), 0, 100, 'UTF-8');
+        $unit = mb_substr(trim((string)($column['unit'] ?? '')), 0, 30, 'UTF-8');
+        $type = (string)($column['type'] ?? 'text');
+        $align = (string)($column['align'] ?? 'left');
+        $normalizedLabel = mb_strtolower($label, 'UTF-8');
+        if ($label === '' || isset($seenLabels[$normalizedLabel])
+            || !in_array($type, ['text', 'number', 'currency', 'textarea'], true)
+            || !in_array($align, ['left', 'center', 'right'], true)) {
+            throw new RuntimeException('Give every quotation field a unique name and valid type/alignment.');
+        }
+        $seenLabels[$normalizedLabel] = true;
+        $columns[] = ['label' => $label, 'unit' => $unit, 'type' => $type, 'align' => $align];
     }
     $config['columns'] = $columns;
     $config['print_layout'] = $layout;
