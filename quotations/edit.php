@@ -410,27 +410,81 @@ unset($_SESSION['quotation_error']);
 }
 
 .quote-table {
-    font-size: 11px;
+    font-size: 12px;
     min-width: 900px;
+    margin-bottom: 0;
+    border-color: #e1e7ef;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.quote-table-wrap {
+    border: 1px solid #e1e7ef;
+    border-radius: 11px;
+    overflow-x: auto;
+    background: #fff;
 }
 
 .quote-table thead th {
-    background: #4a5a6b !important;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #203d68 !important;
     color: #fff !important;
     text-align: center;
     vertical-align: middle;
-    font-size: 10px;
+    font-size: 12px;
+    line-height: 1.35;
+    padding: 13px 11px;
     white-space: nowrap;
 }
 
-.quote-table td {
+.quote-table tbody td {
     vertical-align: middle;
-    padding: 5px;
+    padding: 12px 10px;
+    background: #fff;
 }
 
-.quote-table .form-control {
-    font-size: 11px;
-    min-width: 95px;
+.quote-table tbody tr:hover td {
+    background: #f8fbff;
+}
+
+.quote-table .form-control,
+.quote-table .form-select {
+    font-size: 13px;
+    min-width: 105px;
+    min-height: 39px;
+    border-color: #d8e0ea;
+    border-radius: 7px;
+}
+
+.quote-table textarea.form-control {
+    min-height: 58px;
+}
+
+.quote-table .line-amount-value,
+.quote-table [data-auto-amount-display] {
+    color: #173b6d;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.quote-table tfoot th {
+    background: #f3f7fd;
+    color: #233f6b;
+    padding: 11px;
+    border-color: #e1e7ef;
+}
+
+.quote-table-wrap + .small {
+    margin-top: 8px;
+}
+
+#addRowBtn {
+    min-height: 38px;
+    border-radius: 8px;
+    font-weight: 600;
 }
 
 .term-table {
@@ -910,7 +964,7 @@ foreach ($statuses as $status) {
 
 
 
-<div class="table-responsive">
+<div class="table-responsive quote-table-wrap">
 
 <table class="table table-bordered quote-table mb-0">
 
