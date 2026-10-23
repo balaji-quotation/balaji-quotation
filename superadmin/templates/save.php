@@ -86,6 +86,9 @@ foreach ($cleanColumns as $column) {
     if (($column['field_role'] ?? '') === 'auto_amount') $autoAmountCount++;
 }
 if ($autoAmountCount > 1) templateFail('Use only one Auto Amount field per quotation template.');
+if ($mode === 'standard' && $autoAmountCount > 0 && (!$hasQtyColumn || !$hasRateColumn)) {
+    templateFail('An Auto Amount field needs one Quantity field and one Rate field in Standard calculation mode.');
+}
 $amountVisibilityRequested = $gstEnabled
     || (int)($_POST['show_line_amount'] ?? 0) === 1
     || (int)($_POST['show_subtotal'] ?? 0) === 1
