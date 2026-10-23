@@ -144,15 +144,23 @@ function erpCreateUserQuotationTemplate(
         $label = mb_substr(trim((string)($column['label'] ?? '')), 0, 100, 'UTF-8');
         $unit = mb_substr(trim((string)($column['unit'] ?? '')), 0, 30, 'UTF-8');
         $type = (string)($column['type'] ?? 'text');
+        $fieldRole = (string)($column['field_role'] ?? 'none');
         $align = (string)($column['align'] ?? 'left');
         $normalizedLabel = mb_strtolower($label, 'UTF-8');
         if ($label === '' || isset($seenLabels[$normalizedLabel])
-            || !in_array($type, ['text', 'number', 'currency', 'textarea'], true)
+            || !in_array($type, ['text', 'number', 'currency', 'textarea', 'auto_amount'], true)
+            || !in_array($fieldRole, ['none', 'qty', 'rate', 'amount', 'auto_amount'], true)
             || !in_array($align, ['left', 'center', 'right'], true)) {
-            throw new RuntimeException('Give every quotation field a unique name and valid type/alignment.');
+            throw new RuntimeException('Give every quotation field a unique name and valid type, calculation role, and alignment.');
+        }
+        if (($type === 'auto_amount') !== ($fieldRole === 'auto_amount')) {
+            throw new RuntimeException('Set both Input Type and Calculation Role to Auto Amount for a calculated line total.');
+        }
+        if (in_array($fieldRole, ['qty', 'rate', 'amount'], true) && !in_array($type, ['number', 'currency'], true)) {
+            throw new RuntimeException('Quantity, Rate, and Manual Amount roles require Number or Price / Currency input type.');
         }
         $seenLabels[$normalizedLabel] = true;
-        $columns[] = ['label' => $label, 'unit' => $unit, 'type' => $type, 'align' => $align];
+        $columns[] = ['label' => $label, 'unit' => $unit, 'type' => $type, 'field_role' => $fieldRole, 'align' => $align];
     }
     $config['columns'] = $columns;
     $config['print_layout'] = $layout;
@@ -160,12 +168,17 @@ function erpCreateUserQuotationTemplate(
     $hasQty = false;
     $hasRate = false;
     $hasAmount = false;
+    $autoAmountCount = 0;
     foreach ($columns as $column) {
         if (!is_array($column)) continue;
         $role = quotationTemplateColumnRole($column);
         if ($role === 'qty') $hasQty = true;
         if ($role === 'rate') $hasRate = true;
         if ($role === 'amount') $hasAmount = true;
+        if (($column['field_role'] ?? '') === 'auto_amount') $autoAmountCount++;
+    }
+    if ($autoAmountCount > 1) {
+        throw new RuntimeException('Use only one Auto Amount field in a quotation table.');
     }
     $totals = is_array($config['totals'] ?? null) ? $config['totals'] : [];
     $tax = is_array($config['tax'] ?? null) ? $config['tax'] : [];
@@ -177,6 +190,9 @@ function erpCreateUserQuotationTemplate(
     $calculation = is_array($config['calculation'] ?? null) ? $config['calculation'] : [];
     $mode = (string)($calculation['mode'] ?? 'standard');
     $formula = (string)($calculation['formula'] ?? '');
+    if ($mode === 'standard' && $autoAmountCount > 0 && (!$hasQty || !$hasRate)) {
+        throw new RuntimeException('An Auto Amount field requires one Quantity field and one Rate field in Standard calculation mode.');
+    }
     if ($mode === 'standard' && $amountNeeded && !$hasAmount && !($hasQty && $hasRate)) {
         throw new RuntimeException('Keep the Qty and Rate fields, or an Amount field, because this template calculates totals.');
     }
