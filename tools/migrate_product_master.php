@@ -64,6 +64,17 @@ function productMigrationColumnExists(mysqli $db, string $table, string $column)
     return $exists;
 }
 
+function productMigrationColumnDetails(mysqli $db, string $table, string $column): ?array
+{
+    $stmt = $db->prepare('SELECT DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE, COLUMN_DEFAULT, CHARACTER_SET_NAME, COLLATION_NAME FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ? LIMIT 1');
+    $stmt->bind_param('ss', $table, $column);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $details = $result->fetch_assoc() ?: null;
+    $stmt->close();
+    return $details;
+}
+
 if (!productMigrationTableExists($conn, 'products')) {
     fwrite(STDERR, "Preflight failed: products table does not exist. No changes made.\n");
     exit(3);
@@ -85,12 +96,20 @@ foreach (['description', 'custom_fields_json'] as $column) {
     }
 }
 $fieldTableExists = productMigrationTableExists($conn, 'product_master_fields');
+$productNameColumn = productMigrationColumnDetails($conn, 'products', 'product_name');
+if (!$productNameColumn || !in_array(strtolower((string)$productNameColumn['DATA_TYPE']), ['varchar', 'char'], true)) {
+    fwrite(STDERR, "Preflight failed: products.product_name is missing or is not a character column. No changes made.\n");
+    exit(3);
+}
+$productNameLength = (int)$productNameColumn['CHARACTER_MAXIMUM_LENGTH'];
+$widenProductName = $productNameLength < 255;
 
 echo "Database: {$databaseName}\n";
 echo "Existing product rows: {$beforeCount}\n";
 echo "Columns to add: " . ($missingColumns ? implode(', ', $missingColumns) : 'none') . "\n";
+echo "product_name width: VARCHAR({$productNameLength})" . ($widenProductName ? ' -> VARCHAR(255)' : ' (already at least 255)') . "\n";
 echo "Product field-definition table: " . ($fieldTableExists ? 'already present' : 'will be created') . "\n";
-echo "No product rows or existing product columns will be deleted or rewritten.\n";
+echo "No product rows will be deleted or rewritten. Existing product_name values and column nullability, character set, collation, and non-null default will be preserved.\n";
 
 if (!$apply) {
     echo "Read-only preflight complete. No database changes were made.\n";
@@ -103,6 +122,19 @@ foreach ($missingColumns as $column) {
     } elseif ($column === 'custom_fields_json') {
         $conn->query('ALTER TABLE products ADD COLUMN custom_fields_json LONGTEXT NULL');
     }
+}
+
+if ($widenProductName) {
+    $charset = (string)($productNameColumn['CHARACTER_SET_NAME'] ?? '');
+    $collation = (string)($productNameColumn['COLLATION_NAME'] ?? '');
+    if (!preg_match('/^[a-zA-Z0-9_]+$/', $charset) || !preg_match('/^[a-zA-Z0-9_]+$/', $collation)) {
+        fwrite(STDERR, "Refusing to widen product_name: unsupported character set or collation metadata.\n");
+        exit(3);
+    }
+    $nullability = strtoupper((string)$productNameColumn['IS_NULLABLE']) === 'YES' ? 'NULL' : 'NOT NULL';
+    $default = $productNameColumn['COLUMN_DEFAULT'];
+    $defaultSql = $default !== null ? " DEFAULT '" . $conn->real_escape_string((string)$default) . "'" : '';
+    $conn->query("ALTER TABLE products MODIFY COLUMN product_name VARCHAR(255) CHARACTER SET {$charset} COLLATE {$collation} {$nullability}{$defaultSql}");
 }
 
 $conn->query(
