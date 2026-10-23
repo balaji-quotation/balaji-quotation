@@ -489,22 +489,101 @@ $term_sets_json =
 }
 
 .quote-corporate-table {
-    min-width: 950px;
-    font-size: 11px;
+    min-width: 980px;
+    font-size: 12px;
     margin-bottom: 0;
+    border-color: #e1e7ef;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.quote-table-wrap {
+    border: 1px solid #e1e7ef;
+    border-radius: 11px;
+    overflow-x: auto;
+    background: #fff;
 }
 
 .quote-corporate-table thead th {
-    background: #233f6b !important;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #203d68 !important;
     color: #ffffff !important;
     border-color: #405985 !important;
     text-align: center;
     vertical-align: middle;
+    font-size: 12px;
+    line-height: 1.35;
+    padding: 13px 11px;
     font-weight: 700;
 }
 
-.quote-corporate-table td {
+.quote-corporate-table tbody td {
     vertical-align: middle;
+    padding: 12px 10px;
+    background: #fff;
+}
+
+.quote-corporate-table tbody tr:hover td {
+    background: #f8fbff;
+}
+
+.quote-corporate-table .dynamic-cell-input {
+    min-height: 39px;
+    min-width: 105px;
+    font-size: 13px;
+    border-color: #d8e0ea;
+    border-radius: 7px;
+}
+
+.quote-corporate-table textarea.dynamic-cell-input {
+    min-height: 58px;
+}
+
+.quote-corporate-table .form-control:focus,
+.quote-corporate-table .form-select:focus {
+    border-color: #7ba8e8;
+    box-shadow: 0 0 0 .18rem rgba(61, 130, 220, .13);
+}
+
+.quote-corporate-table .product-master-picker {
+    min-width: 240px;
+    min-height: 39px;
+    border-color: #d8e0ea;
+    border-radius: 7px;
+    font-size: 13px;
+}
+
+.quote-corporate-table .save-to-product-checkbox {
+    flex: 0 0 auto;
+}
+
+.quote-corporate-table .line-amount-value,
+.quote-corporate-table [data-auto-amount-display] {
+    color: #173b6d;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.quote-corporate-table tfoot th {
+    background: #f3f7fd;
+    color: #233f6b;
+    padding: 11px;
+    border-color: #e1e7ef;
+}
+
+.quote-items-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.quote-items-actions .btn {
+    min-height: 38px;
+    border-radius: 8px;
+    font-weight: 600;
 }
 
 .column-config {
@@ -907,13 +986,15 @@ $term_sets_json =
         <div class="quote-section-title">Items</div>
         <div class="quote-section-note">Enter the products and rates for this quotation.</div>
     </div>
-    <?php if (erpCan('products.view')): ?><a href="../products/index.php" class="btn btn-outline-primary btn-sm">Manage Product Master</a><?php endif; ?>
-    <button type="button" class="btn btn-primary btn-sm" id="addRow">+ Add Item</button>
+    <div class="quote-items-actions">
+        <?php if (erpCan('products.view')): ?><a href="../products/index.php" class="btn btn-outline-primary btn-sm">Product Master</a><?php endif; ?>
+        <button type="button" class="btn btn-primary btn-sm" id="addRow">+ Add Item</button>
+    </div>
 </div>
 
 
 
-<div class="table-responsive">
+<div class="table-responsive quote-table-wrap">
 
 <table class="table table-bordered quote-corporate-table">
 
