@@ -1007,9 +1007,9 @@ try {
             ];
 
         $data_type =
-            $column[
-                'data_type'
-            ];
+            ($column['data_type'] ?? '') === 'auto_amount'
+                ? 'number'
+                : $column['data_type'];
 
         $text_align =
             $column[
