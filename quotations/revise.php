@@ -48,10 +48,9 @@ if ($source_id <= 0) {
 $source_sql = "
     SELECT
         q.*,
-        c.company_name AS client_name
+        COALESCE(NULLIF(q.client_name_override, ''), c.company_name, '') AS client_name
     FROM quotations q
-    INNER JOIN clients c
-        ON c.id = q.client_id
+    LEFT JOIN clients c ON c.id = q.client_id AND c.company_id = q.company_id
     WHERE q.id = ?
       AND q.company_id = ?
       AND q.created_by = ?
@@ -1190,49 +1189,32 @@ $term_sets_json =
     Client *
 </label>
 
-<select
-    name="client_id"
-    class="form-select"
+<input
+    type="text"
+    name="client_name"
+    id="clientName"
+    class="form-control"
+    maxlength="150"
+    placeholder="Type customer / company name"
+    autocomplete="off"
+    value="<?= htmlspecialchars((string)($source['client_name'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>"
     required
 >
-
-<option value="">
-    Select Client
-</option>
-
-<?php foreach ($clients as $client) { ?>
-
-<option
-    value="<?= intval(
-        $client[
-            'id'
-        ]
-    ); ?>"
-    <?= (
-        intval(
-            $source[
-                'client_id'
-            ]
-        ) ===
-        intval(
-            $client[
-                'id'
-            ]
-        )
-    )
-        ? 'selected'
-        : '';
-    ?>
+<input
+    type="hidden"
+    name="client_id"
+    id="client_id"
+    value="<?= intval($source['client_id'] ?? 0); ?>"
 >
-    <?= htmlspecialchars(
-        $client[
-            'company_name'
-        ]
-    ); ?>
-</option>
-
-<?php } ?>
-
+<label class="quote-form-label mt-2">Or select from Customer Master</label>
+<select id="clientMasterSelect" class="form-select form-select-sm">
+    <option value="">Choose a saved customer (optional)</option>
+    <?php foreach ($clients as $client) { ?>
+    <option
+        value="<?= intval($client['id']); ?>"
+        <?= intval($source['client_id'] ?? 0) === intval($client['id']) ? 'selected' : ''; ?>
+    ><?= htmlspecialchars($client['company_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></option>
+    <?php } ?>
 </select>
 
 </div>
@@ -2866,6 +2848,27 @@ document.addEventListener(
 
 </script>
 
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    var clientName = document.getElementById("clientName");
+    var clientId = document.getElementById("client_id");
+    var masterSelect = document.getElementById("clientMasterSelect");
+    if (!clientName || !clientId || !masterSelect) return;
+    masterSelect.value = clientId.value;
+    masterSelect.addEventListener("change", function () {
+        if (!this.value) {
+            clientId.value = "";
+            return;
+        }
+        clientId.value = this.value;
+        clientName.value = this.options[this.selectedIndex].textContent.trim();
+    });
+    clientName.addEventListener("input", function () {
+        clientId.value = "";
+        masterSelect.value = "";
+    });
+});
+</script>
 
 <?php
 include("../includes/footer.php");
