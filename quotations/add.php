@@ -548,18 +548,16 @@ $term_sets_json =
 }
 
 .quote-corporate-table .product-master-inline {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px dashed #dce4ee;
+    margin: 0 0 7px;
+    padding: 0 0 7px;
+    border-bottom: 1px solid #e7edf5;
 }
 
 .quote-corporate-table .product-master-inline-label {
     margin-bottom: 4px;
-    color: #718096;
+    color: #526173;
     font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .02em;
-    text-transform: uppercase;
+    font-weight: 600;
 }
 
 .quote-corporate-table .product-master-picker {
@@ -1951,7 +1949,7 @@ document.addEventListener(
 
                 const emptyProductOption = document.createElement("option");
                 emptyProductOption.value = "";
-                emptyProductOption.textContent = "Choose a saved product (optional)";
+                emptyProductOption.textContent = "Choose from Product Master (optional)";
                 productPicker.appendChild(emptyProductOption);
 
                 productCatalog.forEach(function (product) {
@@ -1993,7 +1991,7 @@ document.addEventListener(
                 productWrap.className = "product-master-inline";
                 const productLabel = document.createElement("div");
                 productLabel.className = "product-master-inline-label";
-                productLabel.textContent = "Saved product";
+                productLabel.textContent = "Product Master";
                 productWrap.appendChild(productLabel);
                 productWrap.appendChild(productPicker);
 
@@ -2032,7 +2030,7 @@ document.addEventListener(
                     ? descriptionIndex
                     : (fallbackProductIndex >= 0 ? fallbackProductIndex : Math.max(0, firstVisibleIndex));
                 const productCell = tr.children[targetColumnIndex + 1];
-                if (productCell) productCell.appendChild(productWrap);
+                if (productCell) productCell.prepend(productWrap);
 
                 const actionTd =
                     document.createElement(
