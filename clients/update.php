@@ -43,7 +43,24 @@ $email = trim(
 );
 
 $mobile = trim($_POST['mobile'] ?? '');
-$alternate_mobile = trim($_POST['alternate_mobile'] ?? '');
+$existing_alternate_mobile = '';
+
+$existingClientStmt = mysqli_prepare(
+    $conn,
+    "SELECT alternate_mobile FROM clients WHERE id = ? AND company_id = ? LIMIT 1"
+);
+if (!$existingClientStmt) {
+    die("Database Error: " . mysqli_error($conn));
+}
+mysqli_stmt_bind_param($existingClientStmt, "ii", $id, $companyId);
+mysqli_stmt_execute($existingClientStmt);
+$existingClientResult = mysqli_stmt_get_result($existingClientStmt);
+$existingClient = $existingClientResult ? mysqli_fetch_assoc($existingClientResult) : null;
+mysqli_stmt_close($existingClientStmt);
+if (!$existingClient) {
+    die("Client not found.");
+}
+$existing_alternate_mobile = trim((string)($existingClient['alternate_mobile'] ?? ''));
 
 $address = trim(
     $_POST['address'] ?? ''
@@ -68,11 +85,11 @@ if ($company_name === '' || mb_strlen($company_name, 'UTF-8') > 150) {
 if ($address === '') {
     die("Complete Address is required.");
 }
-if ($mobile === '' && $alternate_mobile === '') {
-    die("Mobile or Alternate Mobile is required.");
+if ($mobile === '' && $existing_alternate_mobile === '') {
+    die("Mobile is required.");
 }
-if (strlen($mobile) > 20 || strlen($alternate_mobile) > 30) {
-    die("Mobile must be 20 characters or fewer and Alternate Mobile 30 characters or fewer.");
+if (strlen($mobile) > 20) {
+    die("Mobile must be 20 characters or fewer.");
 }
 if ($email !== '' && (strlen($email) > 100 || !filter_var($email, FILTER_VALIDATE_EMAIL))) {
     die("Enter a valid email address of 100 characters or fewer.");
@@ -101,7 +118,6 @@ $sql = "
         gstin = ?,
         email = ?,
         mobile = ?,
-        alternate_mobile = ?,
         address = ?,
         status = ?
     WHERE id = ?
@@ -125,13 +141,12 @@ if (!$stmt) {
 
 mysqli_stmt_bind_param(
     $stmt,
-    "ssssssssii",
+    "sssssssii",
     $company_name,
     $contact_person,
     $gstin,
     $email,
     $mobile,
-    $alternate_mobile,
     $address,
     $status,
     $id,
