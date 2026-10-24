@@ -227,7 +227,7 @@ include("../includes/sidebar.php");
 <div class="col-xl-6 col-lg-6 col-md-12">
 
 <label class="client-form-label">
-    Company Name
+    Customer / Company Name
     <span class="required-mark">*</span>
 </label>
 
@@ -286,14 +286,24 @@ include("../includes/sidebar.php");
 </div>
 
 
-<!-- EMAIL -->
-
+<!-- MOBILE -->
 <div class="col-xl-4 col-lg-4 col-md-6">
+<label class="client-form-label">Mobile / Phone</label>
+<input
+    type="text"
+    name="mobile"
+    class="form-control"
+    maxlength="20"
+    value="<?= htmlspecialchars($row['mobile'] ?? ''); ?>"
+    placeholder="+91 9876543210"
+    <?= trim((string)($row['alternate_mobile'] ?? '')) === '' ? 'required' : ''; ?>
+>
+<div class="client-help">Enter the customer's mobile number.</div>
+</div>
 
-<label class="client-form-label">
-    Email
-</label>
-
+<!-- EMAIL -->
+<div class="col-xl-4 col-lg-4 col-md-6">
+<label class="client-form-label">Email</label>
 <input
     type="email"
     name="email"
@@ -302,52 +312,7 @@ include("../includes/sidebar.php");
     value="<?= htmlspecialchars($row['email'] ?? ''); ?>"
     placeholder="client@company.com"
 >
-
 </div>
-
-
-<!-- MOBILE -->
-
-<div class="col-xl-4 col-lg-4 col-md-6">
-
-<label class="client-form-label">
-    Mobile / Phone
-</label>
-
-<input
-    type="text"
-    name="mobile"
-    class="form-control"
-    maxlength="20"
-    value="<?= htmlspecialchars($row['mobile'] ?? ''); ?>"
-    placeholder="+91 9876543210"
->
-
-<div class="client-help">Enter a mobile number here or provide an alternate mobile number.</div>
-
-</div>
-
-
-<!-- ALTERNATE MOBILE -->
-
-<div class="col-xl-4 col-lg-4 col-md-6">
-
-<label class="client-form-label">
-    Alternate Mobile
-</label>
-
-<input
-    type="text"
-    name="alternate_mobile"
-    id="alternate_mobile"
-    class="form-control"
-    maxlength="30"
-    value="<?= htmlspecialchars($row['alternate_mobile'] ?? ''); ?>"
-    placeholder="Alternate phone number"
->
-
-</div>
-
 
 <!-- STATUS -->
 
@@ -386,7 +351,7 @@ include("../includes/sidebar.php");
 <div class="col-12">
 
 <label class="client-form-label">
-    Complete Address
+    Billing Address
     <span class="required-mark">*</span>
 </label>
 
@@ -451,23 +416,20 @@ document.addEventListener(
 
         const form = document.getElementById("client-form");
         const mobile = document.querySelector('[name="mobile"]');
-        const alternateMobile = document.getElementById("alternate_mobile");
+        const hasLegacyAlternate = <?= !empty($row['alternate_mobile']) ? 'true' : 'false'; ?>;
 
         if (form) {
             form.addEventListener("submit", function (event) {
-                const hasPhone = mobile.value.trim() !== "" || alternateMobile.value.trim() !== "";
-                if (!hasPhone) {
+                if (mobile.value.trim() === "" && !hasLegacyAlternate) {
                     event.preventDefault();
-                    mobile.setCustomValidity("Enter a mobile number or an alternate mobile number.");
+                    mobile.setCustomValidity("Enter a mobile number.");
                     mobile.reportValidity();
                 } else {
                     mobile.setCustomValidity("");
                 }
             });
-            [mobile, alternateMobile].forEach(function (field) {
-                field.addEventListener("input", function () {
-                    mobile.setCustomValidity("");
-                });
+            mobile.addEventListener("input", function () {
+                mobile.setCustomValidity("");
             });
         }
 
