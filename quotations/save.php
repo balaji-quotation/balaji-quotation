@@ -160,9 +160,9 @@ $quotation_no =
     );
 
 $client_id =
-    intval(
-        $_POST['client_id'] ?? 0
-    );
+    max(0, intval($_POST['client_id'] ?? 0));
+
+$client_name = quoteClean($_POST['client_name'] ?? '');
 
 $rfq_no =
     quoteClean(
@@ -224,9 +224,9 @@ if ($quotation_no === '') {
     );
 }
 
-if ($client_id <= 0) {
+if ($client_name === '' || mb_strlen($client_name, 'UTF-8') > 150) {
     quoteFail(
-        "Please select Client."
+        "Type the customer or company name (maximum 150 characters)."
     );
 }
 
@@ -255,60 +255,27 @@ if (
 
 
 // =====================================================
-// CHECK CLIENT EXISTS
+// VALIDATE OPTIONAL CUSTOMER MASTER LINK
 // =====================================================
 
-$client_stmt = mysqli_prepare(
-    $conn,
-    "
-    SELECT id
-    FROM clients
-    WHERE id = ?
-      AND company_id = ?
-    LIMIT 1
-    "
-);
-
-if (!$client_stmt) {
-    error_log(
-        "Quotation client check prepare failed: " .
-        mysqli_error($conn)
+if ($client_id > 0) {
+    $client_stmt = mysqli_prepare(
+        $conn,
+        "SELECT company_name FROM clients WHERE id = ? AND company_id = ? LIMIT 1"
     );
-
-    quoteFail(
-        "Unable to validate selected client."
-    );
-}
-
-mysqli_stmt_bind_param(
-    $client_stmt,
-    "ii",
-    $client_id,
-    $companyId
-);
-
-mysqli_stmt_execute(
-    $client_stmt
-);
-
-$client_result =
-    mysqli_stmt_get_result(
-        $client_stmt
-    );
-
-$client_exists =
-    mysqli_fetch_assoc(
-        $client_result
-    );
-
-mysqli_stmt_close(
-    $client_stmt
-);
-
-if (!$client_exists) {
-    quoteFail(
-        "Selected client was not found."
-    );
+    if (!$client_stmt) {
+        error_log("Quotation client check prepare failed: " . mysqli_error($conn));
+        quoteFail("Unable to validate selected customer.");
+    }
+    mysqli_stmt_bind_param($client_stmt, "ii", $client_id, $companyId);
+    mysqli_stmt_execute($client_stmt);
+    $client_result = mysqli_stmt_get_result($client_stmt);
+    $client_exists = mysqli_fetch_assoc($client_result);
+    mysqli_stmt_close($client_stmt);
+    if (!$client_exists) {
+        quoteFail("Selected Customer Master record was not found.");
+    }
+    $client_name = quoteClean($client_exists['company_name']);
 }
 
 
@@ -843,6 +810,7 @@ try {
         (
             quotation_no,
             client_id,
+            client_name_override,
             rfq_no,
             rfq_date,
             quotation_date,
@@ -860,6 +828,7 @@ try {
         VALUES
         (
             ?,
+            NULLIF(?, 0),
             ?,
             ?,
             ?,
@@ -893,9 +862,10 @@ try {
 
     mysqli_stmt_bind_param(
         $master_stmt,
-        "sissssssssiisi",
+        "sisssssssssiisi",
         $quotation_no,
         $client_id,
+        $client_name,
         $rfq_no,
         $rfq_date,
         $quotation_date,
