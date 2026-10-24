@@ -830,38 +830,31 @@ $term_sets_json =
     Client *
 </label>
 
-<select
-    name="client_id"
-    class="form-select"
+<input
+    type="text"
+    name="client_name"
+    id="clientName"
+    class="form-control"
+    maxlength="150"
+    placeholder="Type customer / company name"
+    autocomplete="off"
     required
 >
+<input type="hidden" name="client_id" id="clientId" value="">
 
-<option value="">
-    Select Client
-</option>
-
-<?php foreach ($clients as $client) { ?>
-
-<option
-    value="<?= intval(
-        $client[
-            'id'
-        ]
-    ); ?>"
->
-    <?= htmlspecialchars(
-        $client[
-            'company_name'
-        ]
-    ); ?>
-</option>
-
-<?php } ?>
-
+<label class="quote-form-label mt-2">
+    Or select from Customer Master
+</label>
+<select id="clientMasterSelect" class="form-select form-select-sm">
+    <option value="">Choose a saved customer (optional)</option>
+    <?php foreach ($clients as $client) { ?>
+    <option value="<?= intval($client['id']); ?>"><?= htmlspecialchars($client['company_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></option>
+    <?php } ?>
 </select>
-<button type="button" class="btn btn-sm btn-outline-primary mt-2" id="toggleQuickClient">+ Quick add customer</button>
+
+<button type="button" class="btn btn-sm btn-outline-primary mt-2" id="toggleQuickClient">+ Add full customer to Master</button>
 <div class="border rounded p-2 mt-2" id="quickClientPanel" style="display:none;">
-    <div class="small fw-bold mb-2">Quick add customer</div>
+    <div class="small fw-bold mb-2">Add customer details to Master</div>
     <input type="text" id="quickClientName" class="form-control form-control-sm mb-2" placeholder="Customer / company name *" maxlength="150">
     <textarea id="quickClientAddress" class="form-control form-control-sm mb-2" placeholder="Billing address *" rows="2"></textarea>
     <div class="row g-2">
@@ -870,7 +863,7 @@ $term_sets_json =
     </div>
     <input type="email" id="quickClientEmail" class="form-control form-control-sm mt-2" placeholder="Email (optional)" maxlength="100">
     <div id="quickClientMessage" class="small mt-2" role="status"></div>
-    <button type="button" class="btn btn-sm btn-primary mt-2" id="saveQuickClient">Save and select</button>
+    <button type="button" class="btn btn-sm btn-primary mt-2" id="saveQuickClient">Save to Master and select</button>
     <button type="button" class="btn btn-sm btn-light mt-2" id="cancelQuickClient">Cancel</button>
 </div>
 
@@ -2572,9 +2565,30 @@ document.addEventListener(
     var panel = document.getElementById('quickClientPanel');
     var toggle = document.getElementById('toggleQuickClient');
     var message = document.getElementById('quickClientMessage');
-    var selector = document.querySelector('select[name="client_id"]');
-    if (!panel || !toggle || !selector) return;
-    toggle.addEventListener('click', function () { panel.style.display = panel.style.display === 'none' ? 'block' : 'none'; });
+    var masterSelect = document.getElementById('clientMasterSelect');
+    var clientNameInput = document.getElementById('clientName');
+    var clientIdInput = document.getElementById('clientId');
+    if (!panel || !toggle || !masterSelect || !clientNameInput || !clientIdInput) return;
+    masterSelect.addEventListener('change', function () {
+        var option = this.options[this.selectedIndex];
+        if (this.value && option) {
+            clientNameInput.value = option.textContent.trim();
+            clientIdInput.value = this.value;
+        } else {
+            clientIdInput.value = '';
+        }
+    });
+    clientNameInput.addEventListener('input', function () {
+        clientIdInput.value = '';
+        masterSelect.value = '';
+    });
+    toggle.addEventListener('click', function () {
+        var opening = panel.style.display === 'none';
+        panel.style.display = opening ? 'block' : 'none';
+        if (opening && !document.getElementById('quickClientName').value.trim()) {
+            document.getElementById('quickClientName').value = clientNameInput.value.trim();
+        }
+    });
     document.getElementById('cancelQuickClient').addEventListener('click', function () { panel.style.display = 'none'; });
     document.getElementById('saveQuickClient').addEventListener('click', async function () {
         var name = document.getElementById('quickClientName').value.trim();
@@ -2601,8 +2615,11 @@ document.addEventListener(
             });
             var result = await response.json();
             if (!response.ok || !result.success) throw new Error(result.message || 'Customer could not be saved.');
-            selector.add(new Option(result.company_name, result.id, true, true));
-            selector.value = String(result.id);
+            var savedOption = new Option(result.company_name, result.id, true, true);
+            masterSelect.add(savedOption);
+            masterSelect.value = String(result.id);
+            clientNameInput.value = result.company_name;
+            clientIdInput.value = String(result.id);
             panel.style.display = 'none';
             ['quickClientName','quickClientAddress','quickClientMobile','quickClientAltMobile','quickClientEmail'].forEach(function (id) { document.getElementById(id).value = ''; });
             message.textContent = '';
