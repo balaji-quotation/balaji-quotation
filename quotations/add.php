@@ -60,7 +60,13 @@ $clients = [];
 $client_sql = "
     SELECT
         id,
-        company_name
+        company_name,
+        contact_person,
+        gstin,
+        mobile,
+        alternate_mobile,
+        email,
+        address
     FROM clients
     WHERE company_id = $companyId
     ORDER BY company_name ASC
@@ -722,6 +728,7 @@ $term_sets_json =
 }
 
 .customer-options summary { cursor:pointer; color:#315b91; font-size:12px; font-weight:600; }
+.client-information-panel { background:#f8fbff; border:1px solid #e2eaf4; border-radius:10px; padding:14px; }
 .customer-options select { max-width:100%; }
 #toggleQuickClient { text-decoration:none; }
 </style>
@@ -825,52 +832,54 @@ $term_sets_json =
 </div>
 
 
-<div class="col-xl-3 col-lg-4 col-md-6">
-
-<label class="quote-form-label">
-    Client *
-</label>
-
-<input
-    type="text"
-    name="client_name"
-    id="clientName"
-    class="form-control"
-    maxlength="150"
-    placeholder="Type customer / company name"
-    autocomplete="off"
-    required
->
-<input type="hidden" name="client_id" id="clientId" value="">
-
-<small class="text-muted d-block mt-1">Type the customer name. You can use saved details if needed.</small>
-<details class="customer-options mt-2">
-    <summary>Choose from Customer Master</summary>
-    <select id="clientMasterSelect" class="form-select form-select-sm mt-2">
-        <option value="">Select a saved customer</option>
-        <?php foreach ($clients as $client) { ?>
-        <option value="<?= intval($client['id']); ?>"><?= htmlspecialchars($client['company_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></option>
-        <?php } ?>
-    </select>
-</details>
-<button type="button" class="btn btn-link btn-sm px-0 py-1" id="toggleQuickClient">+ Add full customer details</button>
-<div class="border rounded p-2 mt-2" id="quickClientPanel" style="display:none;">
-    <div class="small fw-bold mb-2">Add customer details to Master</div>
-    <input type="text" id="quickClientName" class="form-control form-control-sm mb-2" placeholder="Customer / company name *" maxlength="150">
-    <textarea id="quickClientAddress" class="form-control form-control-sm mb-2" placeholder="Billing address *" rows="2"></textarea>
-    <div class="row g-2">
-        <div class="col-6"><input type="text" id="quickClientMobile" class="form-control form-control-sm" placeholder="Mobile" maxlength="20"></div>
-        <div class="col-6"><input type="text" id="quickClientAltMobile" class="form-control form-control-sm" placeholder="Alternate mobile" maxlength="30"></div>
+<div class="col-12 client-information-panel">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <div>
+            <label class="quote-form-label mb-0">Customer Information *</label>
+            <small class="text-muted d-block">Naye customer ki details yahin type karein. Purana customer lena ho to Master dropdown se select karein.</small>
+        </div>
+        <input type="hidden" name="client_id" id="clientId" value="">
+        <details class="customer-options">
+            <summary>Choose existing customer</summary>
+            <select id="clientMasterSelect" class="form-select form-select-sm mt-2">
+                <option value="">Select from Customer Master</option>
+                <?php foreach ($clients as $client) { ?>
+                <option value="<?= intval($client['id']); ?>"><?= htmlspecialchars($client['company_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></option>
+                <?php } ?>
+            </select>
+        </details>
     </div>
-    <input type="email" id="quickClientEmail" class="form-control form-control-sm mt-2" placeholder="Email (optional)" maxlength="100">
-    <div id="quickClientMessage" class="small mt-2" role="status"></div>
-    <button type="button" class="btn btn-sm btn-primary mt-2" id="saveQuickClient">Save to Master and select</button>
-    <button type="button" class="btn btn-sm btn-light mt-2" id="cancelQuickClient">Cancel</button>
+    <div class="row g-2">
+        <div class="col-lg-4 col-md-6">
+            <label class="quote-form-label">Customer / Company Name *</label>
+            <input type="text" name="client_name" id="clientName" class="form-control" maxlength="150" autocomplete="off" required>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <label class="quote-form-label">Contact Person</label>
+            <input type="text" name="client_contact_person" id="clientContactPerson" class="form-control" maxlength="150">
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <label class="quote-form-label">GSTIN</label>
+            <input type="text" name="client_gstin" id="clientGstin" class="form-control" maxlength="30">
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <label class="quote-form-label">Mobile</label>
+            <input type="text" name="client_mobile" id="clientMobile" class="form-control" maxlength="20">
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <label class="quote-form-label">Alternate Mobile</label>
+            <input type="text" name="client_alternate_mobile" id="clientAlternateMobile" class="form-control" maxlength="30">
+        </div>
+        <div class="col-lg-6 col-md-12">
+            <label class="quote-form-label">Email</label>
+            <input type="email" name="client_email" id="clientEmail" class="form-control" maxlength="100">
+        </div>
+        <div class="col-12">
+            <label class="quote-form-label">Billing Address</label>
+            <textarea name="client_address" id="clientAddress" class="form-control" rows="2"></textarea>
+        </div>
+    </div>
 </div>
-
-
-</div>
-
 
 <div class="col-xl-2 col-lg-4 col-md-6">
 
@@ -2562,75 +2571,40 @@ document.addEventListener(
 
 
 <script>
-(function () {
-    var panel = document.getElementById('quickClientPanel');
-    var toggle = document.getElementById('toggleQuickClient');
-    var message = document.getElementById('quickClientMessage');
-    var masterSelect = document.getElementById('clientMasterSelect');
-    var clientNameInput = document.getElementById('clientName');
-    var clientIdInput = document.getElementById('clientId');
-    if (!panel || !toggle || !masterSelect || !clientNameInput || !clientIdInput) return;
-    masterSelect.addEventListener('change', function () {
-        var option = this.options[this.selectedIndex];
-        if (this.value && option) {
-            clientNameInput.value = option.textContent.trim();
-            clientIdInput.value = this.value;
-        } else {
-            clientIdInput.value = '';
-        }
-    });
-    clientNameInput.addEventListener('input', function () {
-        clientIdInput.value = '';
-        masterSelect.value = '';
-    });
-    toggle.addEventListener('click', function () {
-        var opening = panel.style.display === 'none';
-        panel.style.display = opening ? 'block' : 'none';
-        if (opening && !document.getElementById('quickClientName').value.trim()) {
-            document.getElementById('quickClientName').value = clientNameInput.value.trim();
-        }
-    });
-    document.getElementById('cancelQuickClient').addEventListener('click', function () { panel.style.display = 'none'; });
-    document.getElementById('saveQuickClient').addEventListener('click', async function () {
-        var name = document.getElementById('quickClientName').value.trim();
-        var address = document.getElementById('quickClientAddress').value.trim();
-        var mobile = document.getElementById('quickClientMobile').value.trim();
-        var alternateMobile = document.getElementById('quickClientAltMobile').value.trim();
-        var email = document.getElementById('quickClientEmail').value.trim();
-        message.className = 'small mt-2 text-danger';
-        if (!name || !address || (!mobile && !alternateMobile)) {
-            message.textContent = 'Name, billing address, and mobile or alternate mobile are required.';
+document.addEventListener("DOMContentLoaded", function () {
+    const customers = <?= json_encode($clients, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+    const select = document.getElementById("clientMasterSelect");
+    const clientId = document.getElementById("clientId");
+    const fieldMap = {
+        company_name: "clientName",
+        contact_person: "clientContactPerson",
+        gstin: "clientGstin",
+        mobile: "clientMobile",
+        alternate_mobile: "clientAlternateMobile",
+        email: "clientEmail",
+        address: "clientAddress"
+    };
+    if (!select || !clientId) return;
+    select.addEventListener("change", function () {
+        const customer = customers.find(item => String(item.id) === String(this.value));
+        if (!customer) {
+            clientId.value = "";
             return;
         }
-        var body = new URLSearchParams({
-            csrf_token: <?= json_encode($_SESSION['csrf_token']); ?>,
-            company_name: name, address: address, mobile: mobile,
-            alternate_mobile: alternateMobile, email: email
+        clientId.value = String(customer.id);
+        Object.entries(fieldMap).forEach(([key, id]) => {
+            const field = document.getElementById(id);
+            if (field) field.value = customer[key] || "";
         });
-        this.disabled = true;
-        try {
-            var response = await fetch('../clients/quick_save.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'Accept': 'application/json'},
-                body: body.toString(), credentials: 'same-origin'
-            });
-            var result = await response.json();
-            if (!response.ok || !result.success) throw new Error(result.message || 'Customer could not be saved.');
-            var savedOption = new Option(result.company_name, result.id, true, true);
-            masterSelect.add(savedOption);
-            masterSelect.value = String(result.id);
-            clientNameInput.value = result.company_name;
-            clientIdInput.value = String(result.id);
-            panel.style.display = 'none';
-            ['quickClientName','quickClientAddress','quickClientMobile','quickClientAltMobile','quickClientEmail'].forEach(function (id) { document.getElementById(id).value = ''; });
-            message.textContent = '';
-        } catch (error) {
-            message.textContent = error.message || 'Customer could not be saved.';
-        } finally {
-            this.disabled = false;
+    });
+    document.getElementById("clientName")?.addEventListener("input", function () {
+        const selected = customers.find(item => String(item.id) === String(clientId.value));
+        if (selected && this.value.trim() !== String(selected.company_name || "").trim()) {
+            clientId.value = "";
+            select.value = "";
         }
     });
-})();
+});
 </script>
 
 <?php
