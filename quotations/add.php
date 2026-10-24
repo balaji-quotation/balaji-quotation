@@ -851,6 +851,7 @@ $term_sets_json =
     <option value="<?= intval($client['id']); ?>"><?= htmlspecialchars($client['company_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></option>
     <?php } ?>
 </select>
+<small class="text-muted d-block mt-1">A typed name is saved with this quotation. Add it to Customer Master only if you want to reuse it later.</small>
 
 <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="toggleQuickClient">+ Add full customer to Master</button>
 <div class="border rounded p-2 mt-2" id="quickClientPanel" style="display:none;">
