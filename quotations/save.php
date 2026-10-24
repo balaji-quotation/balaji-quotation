@@ -1135,12 +1135,19 @@ try {
         if (!$productInsertStmt) {
             throw new Exception("Product Master insert prepare failed: " . mysqli_error($conn));
         }
-        $productMatchStmt = $conn->prepare(
-            "SELECT id FROM products
+        $productMatchSql = "SELECT id FROM products
              WHERE company_id = ? AND product_name = ? AND default_rate = ?
                AND COALESCE(part_number, '') = ?
-             ORDER BY id ASC LIMIT 1"
-        );
+               AND COALESCE(drawing_number, '') = ?
+               AND COALESCE(material, '') = ?";
+        if ($hasProductDescription) {
+            $productMatchSql .= " AND COALESCE(description, '') = ?";
+        }
+        if ($hasProductCustomFields) {
+            $productMatchSql .= " AND COALESCE(custom_fields_json, '') = ?";
+        }
+        $productMatchSql .= " ORDER BY id ASC LIMIT 1";
+        $productMatchStmt = $conn->prepare($productMatchSql);
         if (!$productMatchStmt) {
             throw new Exception("Product Master duplicate check failed: " . mysqli_error($conn));
         }
@@ -1181,7 +1188,15 @@ try {
                 throw new Exception("Product Master custom fields could not be encoded.");
             }
 
-            mysqli_stmt_bind_param($productMatchStmt, "isds", $companyId, $product_name, $default_rate, $part_number);
+            if ($hasProductDescription && $hasProductCustomFields) {
+                mysqli_stmt_bind_param($productMatchStmt, "isdsssss", $companyId, $product_name, $default_rate, $part_number, $drawing_number, $material, $product_description, $product_custom_json);
+            } elseif ($hasProductDescription) {
+                mysqli_stmt_bind_param($productMatchStmt, "isdssss", $companyId, $product_name, $default_rate, $part_number, $drawing_number, $material, $product_description);
+            } elseif ($hasProductCustomFields) {
+                mysqli_stmt_bind_param($productMatchStmt, "isdssss", $companyId, $product_name, $default_rate, $part_number, $drawing_number, $material, $product_custom_json);
+            } else {
+                mysqli_stmt_bind_param($productMatchStmt, "isdsss", $companyId, $product_name, $default_rate, $part_number, $drawing_number, $material);
+            }
             if (!mysqli_stmt_execute($productMatchStmt)) {
                 throw new Exception("Product Master duplicate check failed: " . mysqli_stmt_error($productMatchStmt));
             }
