@@ -723,6 +723,9 @@ $term_sets_json =
     }
 }
 
+.customer-options summary { cursor:pointer; color:#315b91; font-size:12px; font-weight:600; }
+.customer-options select { max-width:100%; }
+#toggleQuickClient { text-decoration:none; }
 </style>
 
 
@@ -842,18 +845,17 @@ $term_sets_json =
 >
 <input type="hidden" name="client_id" id="clientId" value="">
 
-<label class="quote-form-label mt-2">
-    Or select from Customer Master
-</label>
-<select id="clientMasterSelect" class="form-select form-select-sm">
-    <option value="">Choose a saved customer (optional)</option>
-    <?php foreach ($clients as $client) { ?>
-    <option value="<?= intval($client['id']); ?>"><?= htmlspecialchars($client['company_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></option>
-    <?php } ?>
-</select>
-<small class="text-muted d-block mt-1">A typed name is saved with this quotation. Add it to Customer Master only if you want to reuse it later.</small>
-
-<button type="button" class="btn btn-sm btn-outline-primary mt-2" id="toggleQuickClient">+ Add full customer to Master</button>
+<small class="text-muted d-block mt-1">Type the customer name. You can use saved details if needed.</small>
+<details class="customer-options mt-2">
+    <summary>Choose from Customer Master</summary>
+    <select id="clientMasterSelect" class="form-select form-select-sm mt-2">
+        <option value="">Select a saved customer</option>
+        <?php foreach ($clients as $client) { ?>
+        <option value="<?= intval($client['id']); ?>"><?= htmlspecialchars($client['company_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></option>
+        <?php } ?>
+    </select>
+</details>
+<button type="button" class="btn btn-link btn-sm px-0 py-1" id="toggleQuickClient">+ Add full customer details</button>
 <div class="border rounded p-2 mt-2" id="quickClientPanel" style="display:none;">
     <div class="small fw-bold mb-2">Add customer details to Master</div>
     <input type="text" id="quickClientName" class="form-control form-control-sm mb-2" placeholder="Customer / company name *" maxlength="150">
