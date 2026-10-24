@@ -211,11 +211,10 @@ $quotation_no =
     );
 
 $client_id =
-    intval(
-        $_POST[
-            'client_id'
-        ] ?? 0
-    );
+    max(0, intval($_POST['client_id'] ?? 0));
+
+$client_name =
+    revisionClean($_POST['client_name'] ?? '');
 
 $rfq_no =
     revisionClean(
@@ -298,10 +297,9 @@ if ($quotation_no === '') {
 }
 
 
-if ($client_id <= 0) {
-
+if ($client_name === '' || mb_strlen($client_name, 'UTF-8') > 150) {
     revisionFail(
-        "Please select Client.",
+        "Type the customer or company name (maximum 150 characters).",
         $source_quotation_id
     );
 }
@@ -574,20 +572,23 @@ foreach (
 // TENANT-OWNED CLIENT CHECK
 // =====================================================
 
-$clientCheck = mysqli_prepare(
-    $conn,
-    "SELECT id FROM clients WHERE id = ? AND company_id = ? LIMIT 1"
-);
-if (!$clientCheck) {
-    revisionFail("Unable to validate selected client.", $source_quotation_id);
-}
-mysqli_stmt_bind_param($clientCheck, "ii", $client_id, $companyId);
-mysqli_stmt_execute($clientCheck);
-$clientResult = mysqli_stmt_get_result($clientCheck);
-$clientExists = $clientResult && mysqli_num_rows($clientResult) === 1;
-mysqli_stmt_close($clientCheck);
-if (!$clientExists) {
-    revisionFail("Selected client was not found.", $source_quotation_id);
+if ($client_id > 0) {
+    $clientCheck = mysqli_prepare(
+        $conn,
+        "SELECT company_name FROM clients WHERE id = ? AND company_id = ? LIMIT 1"
+    );
+    if (!$clientCheck) {
+        revisionFail("Unable to validate selected customer.", $source_quotation_id);
+    }
+    mysqli_stmt_bind_param($clientCheck, "ii", $client_id, $companyId);
+    mysqli_stmt_execute($clientCheck);
+    $clientResult = mysqli_stmt_get_result($clientCheck);
+    $selectedClient = $clientResult ? mysqli_fetch_assoc($clientResult) : null;
+    mysqli_stmt_close($clientCheck);
+    if (!$selectedClient) {
+        revisionFail("Selected Customer Master record was not found.", $source_quotation_id);
+    }
+    $client_name = revisionClean($selectedClient['company_name']);
 }
 
 
@@ -838,6 +839,7 @@ try {
         (
             quotation_no,
             client_id,
+            client_name_override,
             rfq_no,
             rfq_date,
             quotation_date,
@@ -857,6 +859,7 @@ try {
         VALUES
         (
             ?,
+            NULLIF(?, 0),
             ?,
             ?,
             ?,
@@ -895,9 +898,10 @@ try {
 
     mysqli_stmt_bind_param(
         $master_stmt,
-        "sissssssssiiisiii",
+        "sisssssssssiiisiii",
         $quotation_no,
         $client_id,
+        $client_name,
         $rfq_no,
         $rfq_date,
         $quotation_date,
