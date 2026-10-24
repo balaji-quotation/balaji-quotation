@@ -37,10 +37,11 @@ if ($quotation_id <= 0) {
 $master_sql = "
     SELECT
         q.*,
-        c.company_name AS client_name
+        COALESCE(NULLIF(q.client_name_override, ''), c.company_name, '') AS client_name
     FROM quotations q
-    INNER JOIN clients c
+    LEFT JOIN clients c
         ON c.id = q.client_id
+       AND c.company_id = q.company_id
     WHERE q.id = ?
       AND q.company_id = ?
     LIMIT 1
