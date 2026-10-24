@@ -1188,6 +1188,7 @@ try {
             $existingProduct = mysqli_stmt_get_result($productMatchStmt)->fetch_assoc();
             if ($existingProduct) {
                 $product_id = (int)$existingProduct['id'];
+                $savedProductCount++;
             } else {
                 if ($hasProductDescription && $hasProductCustomFields) {
                     mysqli_stmt_bind_param($productInsertStmt, "issdssssss", $companyId, $product_code, $product_name, $default_rate, $part_number, $drawing_number, $material, $product_remarks, $product_description, $product_custom_json);
@@ -1456,7 +1457,7 @@ try {
 
 
     $_SESSION['quotation_success'] = $savedProductCount > 0
-        ? "Quotation saved successfully. {$savedProductCount} item(s) added to Product Master."
+        ? "Quotation saved successfully. {$savedProductCount} manual item(s) saved or matched in Product Master."
         : "Quotation saved successfully.";
 
 
