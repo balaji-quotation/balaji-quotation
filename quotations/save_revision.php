@@ -592,6 +592,19 @@ if ($client_id > 0) {
 }
 
 
+$client_details_snapshot = json_encode([
+    'company_name' => $client_name,
+    'contact_person' => revisionClean($_POST['client_contact_person'] ?? ''),
+    'gstin' => revisionClean($_POST['client_gstin'] ?? ''),
+    'mobile' => revisionClean($_POST['client_mobile'] ?? ''),
+    'alternate_mobile' => revisionClean($_POST['client_alternate_mobile'] ?? ''),
+    'email' => revisionClean($_POST['client_email'] ?? ''),
+    'address' => revisionClean($_POST['client_address'] ?? '')
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+if (!is_string($client_details_snapshot)) {
+    revisionFail("Customer information could not be encoded.", $source_quotation_id);
+}
+
 // TRANSACTION
 // =====================================================
 
@@ -840,6 +853,7 @@ try {
             quotation_no,
             client_id,
             client_name_override,
+            client_details_snapshot,
             rfq_no,
             rfq_date,
             quotation_date,
@@ -860,6 +874,7 @@ try {
         (
             ?,
             NULLIF(?, 0),
+            ?,
             ?,
             ?,
             ?,
@@ -898,10 +913,11 @@ try {
 
     mysqli_stmt_bind_param(
         $master_stmt,
-        "sisssssssssiiisiii",
+        "sissssssssssiiisiii",
         $quotation_no,
         $client_id,
         $client_name,
+        $client_details_snapshot,
         $rfq_no,
         $rfq_date,
         $quotation_date,
