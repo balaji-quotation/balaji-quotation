@@ -587,6 +587,9 @@ unset($_SESSION['quotation_error']);
     overflow-wrap: anywhere;
 }
 
+.customer-options summary { cursor:pointer; color:#315b91; font-size:12px; font-weight:600; }
+.customer-options select { max-width:100%; }
+#toggleQuickClient { text-decoration:none; }
 </style>
 
 
@@ -742,17 +745,19 @@ unset($_SESSION['quotation_error']);
     id="client_id"
     value="<?= intval($quotation['client_id'] ?? 0); ?>"
 >
-<label class="quote-form-label mt-2">Or select from Customer Master</label>
-<select id="clientMasterSelect" class="form-select form-select-sm">
-    <option value="">Choose a saved customer (optional)</option>
-    <?php foreach ($clients as $client) { ?>
-    <option
-        value="<?= intval($client['id']); ?>"
-        <?= intval($quotation['client_id'] ?? 0) === intval($client['id']) ? 'selected' : ''; ?>
-    ><?= htmlspecialchars($client['company_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></option>
-    <?php } ?>
-</select>
-<small class="text-muted d-block mt-1">A typed name stays with this quotation. Selecting a saved customer links it to Customer Master.</small>
+<small class="text-muted d-block mt-1">Type the customer name or optionally choose saved details.</small>
+<details class="customer-options mt-2" <?= !empty($quotation['client_id']) ? 'open' : ''; ?>>
+    <summary>Choose from Customer Master</summary>
+    <select id="clientMasterSelect" class="form-select form-select-sm mt-2">
+        <option value="">Select a saved customer</option>
+        <?php foreach ($clients as $client) { ?>
+        <option
+            value="<?= intval($client['id']); ?>"
+            <?= intval($quotation['client_id'] ?? 0) === intval($client['id']) ? 'selected' : ''; ?>
+        ><?= htmlspecialchars($client['company_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></option>
+        <?php } ?>
+    </select>
+</details>
 
 </div>
 
