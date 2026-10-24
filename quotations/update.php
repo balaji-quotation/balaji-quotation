@@ -112,9 +112,7 @@ $client_details_snapshot = json_encode([
     'company_name' => $client_name,
     'contact_person' => postText('client_contact_person'),
     'gstin' => postText('client_gstin'),
-    'mobile' => postText('client_mobile'),
-    'alternate_mobile' => postText('client_alternate_mobile'),
-    'email' => postText('client_email'),
+    'mobile' => postText('client_mobile'),    'email' => postText('client_email'),
     'address' => postText('client_address')
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 if (!is_string($client_details_snapshot)) {
