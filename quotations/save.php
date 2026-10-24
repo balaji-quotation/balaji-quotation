@@ -163,6 +163,20 @@ $client_id =
     max(0, intval($_POST['client_id'] ?? 0));
 
 $client_name = quoteClean($_POST['client_name'] ?? '');
+$client_details_snapshot = json_encode([
+    'company_name' => $client_name,
+    'contact_person' => quoteClean($_POST['client_contact_person'] ?? ''),
+    'gstin' => quoteClean($_POST['client_gstin'] ?? ''),
+    'mobile' => quoteClean($_POST['client_mobile'] ?? ''),
+    'alternate_mobile' => quoteClean($_POST['client_alternate_mobile'] ?? ''),
+    'email' => quoteClean($_POST['client_email'] ?? ''),
+    'address' => quoteClean($_POST['client_address'] ?? '')
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+if (!is_string($client_details_snapshot)) {
+    throw new RuntimeException('Customer information could not be encoded.');
+}
+
+
 
 $rfq_no =
     quoteClean(
@@ -811,6 +825,7 @@ try {
             quotation_no,
             client_id,
             client_name_override,
+            client_details_snapshot,
             rfq_no,
             rfq_date,
             quotation_date,
@@ -862,10 +877,11 @@ try {
 
     mysqli_stmt_bind_param(
         $master_stmt,
-        "sisssssssssiisi",
+        "sissssssssssiisi",
         $quotation_no,
         $client_id,
         $client_name,
+        $client_details_snapshot,
         $rfq_no,
         $rfq_date,
         $quotation_date,
