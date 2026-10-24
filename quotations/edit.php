@@ -43,8 +43,10 @@ if ($quotation_id <= 0) {
 // =====================================================
 
 $master_sql = "
-    SELECT q.*
+    SELECT q.*,
+           COALESCE(NULLIF(q.client_name_override, ''), c.company_name, '') AS client_name
     FROM quotations q
+    LEFT JOIN clients c ON c.id = q.client_id AND c.company_id = q.company_id
     WHERE q.id = ?
       AND q.company_id = ?
       AND q.created_by = ?
@@ -723,33 +725,32 @@ unset($_SESSION['quotation_error']);
     Client *
 </label>
 
-<select
-    name="client_id"
-    id="client_id"
-    class="form-select"
+<input
+    type="text"
+    name="client_name"
+    id="clientName"
+    class="form-control"
+    maxlength="150"
+    placeholder="Type customer / company name"
+    autocomplete="off"
+    value="<?= htmlspecialchars((string)($quotation['client_name'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>"
     required
 >
-
-<option value="">
-    Select Client
-</option>
-
-<?php foreach ($clients as $client) { ?>
-
-<option
-    value="<?= intval($client['id']); ?>"
-    <?= intval($quotation['client_id'] ?? 0) === intval($client['id'])
-        ? 'selected'
-        : '';
-    ?>
+<input
+    type="hidden"
+    name="client_id"
+    id="client_id"
+    value="<?= intval($quotation['client_id'] ?? 0); ?>"
 >
-    <?= htmlspecialchars(
-        $client['company_name']
-    ); ?>
-</option>
-
-<?php } ?>
-
+<label class="quote-form-label mt-2">Or select from Customer Master</label>
+<select id="clientMasterSelect" class="form-select form-select-sm">
+    <option value="">Choose a saved customer (optional)</option>
+    <?php foreach ($clients as $client) { ?>
+    <option
+        value="<?= intval($client['id']); ?>"
+        <?= intval($quotation['client_id'] ?? 0) === intval($client['id']) ? 'selected' : ''; ?>
+    ><?= htmlspecialchars($client['company_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></option>
+    <?php } ?>
 </select>
 
 </div>
@@ -2223,6 +2224,30 @@ document.addEventListener(
 
 </script>
 
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    var clientName = document.getElementById("clientName");
+    var clientId = document.getElementById("client_id");
+    var masterSelect = document.getElementById("clientMasterSelect");
+    if (!clientName || !clientId || !masterSelect) return;
+    masterSelect.value = clientId.value;
+    masterSelect.addEventListener("change", function () {
+        if (!this.value) {
+            clientId.value = "";
+            clientId.dispatchEvent(new Event("change"));
+            return;
+        }
+        clientId.value = this.value;
+        clientName.value = this.options[this.selectedIndex].textContent.trim();
+        clientId.dispatchEvent(new Event("change"));
+    });
+    clientName.addEventListener("input", function () {
+        clientId.value = "";
+        masterSelect.value = "";
+        clientId.dispatchEvent(new Event("change"));
+    });
+});
+</script>
 
 <?php
 include("../includes/footer.php");
