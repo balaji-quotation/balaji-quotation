@@ -731,6 +731,124 @@ $term_sets_json =
 .client-information-panel { background:#f8fbff; border:1px solid #e2eaf4; border-radius:10px; padding:14px; }
 .customer-options select { max-width:100%; }
 #toggleQuickClient { text-decoration:none; }
+
+/* Shared quotation item table layout */
+.quote-table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow: auto;
+    overscroll-behavior-inline: contain;
+    border: 1px solid #dce4ee;
+    border-radius: 10px;
+    background: #fff;
+}
+.quote-corporate-table {
+    width: max-content;
+    min-width: 980px;
+    margin: 0;
+    border: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12px;
+}
+.quote-corporate-table th,
+.quote-corporate-table td {
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+}
+.quote-corporate-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 12px 10px;
+    background: #203d68 !important;
+    color: #fff !important;
+    border-color: #405985 !important;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+.quote-corporate-table thead th:first-child {
+    left: 0;
+    z-index: 4;
+}
+.quote-corporate-table tbody td {
+    padding: 10px;
+    background: #fff;
+    vertical-align: middle;
+}
+.quote-corporate-table tbody tr:nth-child(even) td {
+    background: #f8fafd;
+}
+.quote-corporate-table tbody tr:hover td {
+    background: #f0f6ff;
+}
+.quote-corporate-table tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    min-width: 48px;
+    background: #f3f7fc;
+    color: #526173;
+    text-align: center;
+    font-weight: 700;
+}
+.quote-corporate-table .form-control,
+.quote-corporate-table .form-select {
+    min-width: 105px;
+    min-height: 39px;
+    border: 1px solid #d5deea;
+    border-radius: 7px;
+    font-size: 13px;
+}
+.quote-corporate-table textarea.form-control {
+    min-width: 160px;
+    min-height: 58px;
+}
+.quote-corporate-table .form-control:focus,
+.quote-corporate-table .form-select:focus {
+    border-color: #79a5e3;
+    box-shadow: 0 0 0 .18rem rgba(61, 130, 220, .13);
+}
+.quote-corporate-table .line-amount-value,
+.quote-corporate-table [data-auto-amount-display] {
+    min-width: 100px;
+    color: #173b6d;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: right;
+    white-space: nowrap;
+}
+.quote-corporate-table tfoot th {
+    padding: 11px;
+    background: #edf4fd;
+    color: #233f6b;
+    border-color: #dce4ee;
+}
+.quote-corporate-table td:last-child,
+.quote-corporate-table th:last-child {
+    min-width: 58px;
+    text-align: center;
+}
+.quote-table-wrap::-webkit-scrollbar {
+    height: 9px;
+}
+.quote-table-wrap::-webkit-scrollbar-thumb {
+    background: #bac8d9;
+    border-radius: 9px;
+}
+@media (max-width: 767.98px) {
+    .quote-corporate-table {
+        min-width: 850px;
+    }
+    .quote-corporate-table tbody td {
+        padding: 8px;
+    }
+}
+
 </style>
 
 
