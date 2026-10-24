@@ -96,15 +96,16 @@ function printImageUrl($value)
 $master_sql = "
     SELECT
         q.*,
-        c.company_name AS client_name,
+        COALESCE(NULLIF(q.client_name_override, ''), c.company_name, '') AS client_name,
         c.contact_person AS client_contact_person,
         c.gstin AS client_gstin,
         c.mobile AS client_mobile,
         c.email AS client_email,
         c.address AS client_address
     FROM quotations q
-    INNER JOIN clients c
+    LEFT JOIN clients c
         ON c.id = q.client_id
+       AND c.company_id = q.company_id
     WHERE q.id = ?
       AND q.company_id = ?
     LIMIT 1
