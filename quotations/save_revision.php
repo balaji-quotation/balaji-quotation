@@ -596,9 +596,7 @@ $client_details_snapshot = json_encode([
     'company_name' => $client_name,
     'contact_person' => revisionClean($_POST['client_contact_person'] ?? ''),
     'gstin' => revisionClean($_POST['client_gstin'] ?? ''),
-    'mobile' => revisionClean($_POST['client_mobile'] ?? ''),
-    'alternate_mobile' => revisionClean($_POST['client_alternate_mobile'] ?? ''),
-    'email' => revisionClean($_POST['client_email'] ?? ''),
+    'mobile' => revisionClean($_POST['client_mobile'] ?? ''),    'email' => revisionClean($_POST['client_email'] ?? ''),
     'address' => revisionClean($_POST['client_address'] ?? '')
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 if (!is_string($client_details_snapshot)) {
