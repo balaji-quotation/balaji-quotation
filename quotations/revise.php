@@ -1216,6 +1216,7 @@ $term_sets_json =
     ><?= htmlspecialchars($client['company_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></option>
     <?php } ?>
 </select>
+<small class="text-muted d-block mt-1">A typed name stays with this revision. Selecting a saved customer links it to Customer Master.</small>
 
 </div>
 
