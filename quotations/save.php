@@ -377,14 +377,10 @@ if (!is_array($posted_product_ids)) {
     $posted_product_ids = [];
 }
 
-$posted_save_to_product = $_POST['save_to_product'] ?? [];
-if (!is_array($posted_save_to_product)) {
-    $posted_save_to_product = [];
-}
-
 $productCheckStmt = $conn->prepare(
     'SELECT id FROM products WHERE id = ? AND company_id = ? LIMIT 1'
 );
+$productMasterCustomFieldDefinitions = productMasterFieldDefinitions($conn);
 if (!$productCheckStmt) {
     quoteFail('Product selection could not be verified.');
 }
@@ -405,12 +401,6 @@ foreach (
     }
 
 
-    $saveToProduct = (string)($posted_save_to_product[$postedIndex] ?? '') === '1';
-    if ($saveToProduct && !erpCan('quotations.save_products_to_master')) {
-        $productCheckStmt->close();
-        quoteFail('Your account cannot save quotation items to Product Master.');
-    }
-
     $rawProductId = trim((string)($posted_product_ids[$postedIndex] ?? ''));
     $productId = 0;
     if ($rawProductId !== '') {
@@ -420,10 +410,6 @@ foreach (
             quoteFail('Invalid product selection.');
         }
         $productId = (int)$validatedProductId;
-        if ($saveToProduct) {
-            $productCheckStmt->close();
-            quoteFail('Choose Manual entry before saving a quotation item to Product Master.');
-        }
         $productCheckStmt->bind_param('ii', $productId, $companyId);
         $productCheckStmt->execute();
         if ($productCheckStmt->get_result()->num_rows !== 1) {
@@ -432,6 +418,7 @@ foreach (
         }
     }
 
+    $saveToProduct = $productId === 0;
     $row_json_data = [];
 
     $has_value = $productId > 0;
@@ -501,6 +488,10 @@ foreach (
     $catalogDescription = '';
     $catalogRate = '';
     $catalogPartNumber = '';
+    $catalogDrawingNumber = '';
+    $catalogMaterial = '';
+    $catalogCustomFields = [];
+    $firstCatalogValue = '';
     if ($saveToProduct) {
         $nameCandidates = [
             'productname' => 1,
@@ -508,6 +499,8 @@ foreach (
             'productdescription' => 3,
             'itemdescription' => 4,
             'description' => 5,
+            'specification' => 5,
+            'specifications' => 5,
             'item' => 6,
             'product' => 7,
             'material' => 8,
@@ -523,12 +516,15 @@ foreach (
             if ($value === '') {
                 continue;
             }
+            if ($firstCatalogValue === '' && !is_numeric($value)) {
+                $firstCatalogValue = $value;
+            }
 
             if (isset($nameCandidates[$labelKey]) && $nameCandidates[$labelKey] < $bestNamePriority) {
                 $catalogName = $value;
                 $bestNamePriority = $nameCandidates[$labelKey];
             }
-            if ($catalogDescription === '' && in_array($labelKey, ['description', 'productdescription', 'itemdescription', 'details'], true)) {
+            if ($catalogDescription === '' && in_array($labelKey, ['description', 'productdescription', 'itemdescription', 'specification', 'specifications', 'details'], true)) {
                 $catalogDescription = $value;
             }
             if ($catalogRate === '' && in_array($labelKey, ['rate', 'price', 'unitrate', 'unitprice', 'rateperunit', 'priceperunit'], true)) {
@@ -537,11 +533,45 @@ foreach (
             if ($catalogPartNumber === '' && in_array($labelKey, ['partnumber', 'partno', 'part'], true)) {
                 $catalogPartNumber = $value;
             }
+            if ($catalogDrawingNumber === '' && in_array($labelKey, ['drawingnumber', 'drawingno', 'drawingreference'], true)) {
+                $catalogDrawingNumber = $value;
+            }
+            if ($catalogMaterial === '' && (str_contains($labelKey, 'material') || str_contains($labelKey, 'grade'))) {
+                $catalogMaterial = $value;
+            }
+        }
+
+        foreach ($productMasterCustomFieldDefinitions as $customFieldDefinition) {
+            $normalizeField = static function ($value): string {
+                return strtolower((string)preg_replace('/[^a-z0-9]+/i', '', (string)$value));
+            };
+            $customLabel = $normalizeField($customFieldDefinition['label'] ?? '');
+            $customKey = $normalizeField($customFieldDefinition['field_key'] ?? '');
+            foreach ($columns as $column) {
+                $columnLabel = $normalizeField($column['column_label'] ?? '');
+                $columnKey = $normalizeField($column['column_key'] ?? '');
+                if ($customLabel !== $columnLabel && $customKey !== $columnLabel
+                    && $customLabel !== $columnKey && $customKey !== $columnKey) {
+                    continue;
+                }
+                $customValue = quoteClean($row_json_data[$column['column_key']] ?? '');
+                if ($customValue !== '') {
+                    $catalogCustomFields[(string)$customFieldDefinition['field_key']] = $customValue;
+                }
+                break;
+            }
         }
 
         if ($catalogName === '') {
+            $catalogName = $firstCatalogValue;
+        }
+        if ($catalogName === '') {
             $productCheckStmt->close();
-            quoteFail('Add a value in the Product Name or Description column before saving this item to Product Master.');
+            quoteFail('Enter a product name or description before saving this item.');
+        }
+        if (mb_strlen($catalogName, 'UTF-8') > 255) {
+            $productCheckStmt->close();
+            quoteFail('Product name must be 255 characters or fewer.');
         }
         if ($catalogDescription === '') {
             $catalogDescription = $catalogName;
@@ -589,6 +619,12 @@ foreach (
             $catalogRate,
         'catalog_part_number' =>
             $catalogPartNumber,
+        'catalog_drawing_number' =>
+            $catalogDrawingNumber,
+        'catalog_material' =>
+            $catalogMaterial,
+        'catalog_custom_fields' =>
+            $catalogCustomFields,
         'row_data' =>
             $row_json_data
     ];
@@ -1077,22 +1113,38 @@ try {
 
 
     $productInsertStmt = null;
+    $productMatchStmt = null;
+    $hasProductDescription = productMasterColumnExists($conn, 'description');
+    $hasProductCustomFields = productMasterColumnExists($conn, 'custom_fields_json');
     foreach ($rows as $row) {
-        if (!empty($row['save_to_product'])) {
-            $hasProductDescription = productMasterColumnExists($conn, 'description');
-            $productInsertSql = $hasProductDescription
-                ? "INSERT INTO products
-                   (company_id, product_code, product_name, default_rate, part_number, drawing_number, revision_no, pricing_type, unit, weight_per_piece, material, quantity, priority, status, drawing_file, product_image, remarks, description)
-                   VALUES (?, ?, ?, ?, ?, '', '00', 'PCS', 'PCS', 0, '', 0, 'Low', 'Received', '', '', ?, ?)"
-                : "INSERT INTO products
-                   (company_id, product_code, product_name, default_rate, part_number, drawing_number, revision_no, pricing_type, unit, weight_per_piece, material, quantity, priority, status, drawing_file, product_image, remarks)
-                   VALUES (?, ?, ?, ?, ?, '', '00', 'PCS', 'PCS', 0, '', 0, 'Low', 'Received', '', '', ?)";
-            $productInsertStmt = mysqli_prepare($conn, $productInsertSql);
-            if (!$productInsertStmt) {
-                throw new Exception("Product Master insert prepare failed: " . mysqli_error($conn));
-            }
-            break;
+        if (empty($row['save_to_product'])) {
+            continue;
         }
+        $productInsertColumns = '(company_id, product_code, product_name, default_rate, part_number, drawing_number, revision_no, pricing_type, unit, weight_per_piece, material, quantity, priority, status, drawing_file, product_image, remarks';
+        $productInsertValues = "(?, ?, ?, ?, ?, ?, '00', 'PCS', 'PCS', 0, ?, 0, 'Low', 'Received', '', '', ?";
+        if ($hasProductDescription) {
+            $productInsertColumns .= ', description';
+            $productInsertValues .= ', ?';
+        }
+        if ($hasProductCustomFields) {
+            $productInsertColumns .= ', custom_fields_json';
+            $productInsertValues .= ', ?';
+        }
+        $productInsertSql = "INSERT INTO products {$productInsertColumns}) VALUES {$productInsertValues})";
+        $productInsertStmt = mysqli_prepare($conn, $productInsertSql);
+        if (!$productInsertStmt) {
+            throw new Exception("Product Master insert prepare failed: " . mysqli_error($conn));
+        }
+        $productMatchStmt = $conn->prepare(
+            "SELECT id FROM products
+             WHERE company_id = ? AND product_name = ? AND default_rate = ?
+               AND COALESCE(part_number, '') = ?
+             ORDER BY id ASC LIMIT 1"
+        );
+        if (!$productMatchStmt) {
+            throw new Exception("Product Master duplicate check failed: " . mysqli_error($conn));
+        }
+        break;
     }
 
     $savedProductCount = 0;
@@ -1116,40 +1168,43 @@ try {
             $product_name = $row['catalog_name'];
             $default_rate = $row['catalog_rate'];
             $part_number = $row['catalog_part_number'];
+            $drawing_number = (string)($row['catalog_drawing_number'] ?? '');
+            $material = (string)($row['catalog_material'] ?? '');
             $product_remarks = 'Saved from quotation ' . $quotation_no;
-
             $default_rate = $default_rate === '' ? 0.0 : (float)$default_rate;
-            if ($hasProductDescription) {
-                $product_description = $row['catalog_description'];
-                mysqli_stmt_bind_param(
-                    $productInsertStmt,
-                    "issdsss",
-                    $companyId,
-                    $product_code,
-                    $product_name,
-                    $default_rate,
-                    $part_number,
-                    $product_remarks,
-                    $product_description
-                );
-            } else {
-                mysqli_stmt_bind_param(
-                    $productInsertStmt,
-                    "issdss",
-                    $companyId,
-                    $product_code,
-                    $product_name,
-                    $default_rate,
-                    $part_number,
-                    $product_remarks
-                );
+            $product_description = (string)($row['catalog_description'] ?? '');
+            $product_custom_json = json_encode(
+                $row['catalog_custom_fields'] ?? [],
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+            );
+            if (!is_string($product_custom_json)) {
+                throw new Exception("Product Master custom fields could not be encoded.");
             }
 
-            if (!mysqli_stmt_execute($productInsertStmt)) {
-                throw new Exception("Product Master save failed: " . mysqli_stmt_error($productInsertStmt));
+            mysqli_stmt_bind_param($productMatchStmt, "isds", $companyId, $product_name, $default_rate, $part_number);
+            if (!mysqli_stmt_execute($productMatchStmt)) {
+                throw new Exception("Product Master duplicate check failed: " . mysqli_stmt_error($productMatchStmt));
             }
-            $product_id = (int)mysqli_insert_id($conn);
-            $savedProductCount++;
+            $existingProduct = mysqli_stmt_get_result($productMatchStmt)->fetch_assoc();
+            if ($existingProduct) {
+                $product_id = (int)$existingProduct['id'];
+            } else {
+                if ($hasProductDescription && $hasProductCustomFields) {
+                    mysqli_stmt_bind_param($productInsertStmt, "issdssssss", $companyId, $product_code, $product_name, $default_rate, $part_number, $drawing_number, $material, $product_remarks, $product_description, $product_custom_json);
+                } elseif ($hasProductDescription) {
+                    mysqli_stmt_bind_param($productInsertStmt, "issdsssss", $companyId, $product_code, $product_name, $default_rate, $part_number, $drawing_number, $material, $product_remarks, $product_description);
+                } elseif ($hasProductCustomFields) {
+                    mysqli_stmt_bind_param($productInsertStmt, "issdsssss", $companyId, $product_code, $product_name, $default_rate, $part_number, $drawing_number, $material, $product_remarks, $product_custom_json);
+                } else {
+                    mysqli_stmt_bind_param($productInsertStmt, "issdssss", $companyId, $product_code, $product_name, $default_rate, $part_number, $drawing_number, $material, $product_remarks);
+                }
+
+                if (!mysqli_stmt_execute($productInsertStmt)) {
+                    throw new Exception("Product Master save failed: " . mysqli_stmt_error($productInsertStmt));
+                }
+                $product_id = (int)mysqli_insert_id($conn);
+                $savedProductCount++;
+            }
         }
 
         $item_reference =
@@ -1207,6 +1262,9 @@ try {
     );
     if ($productInsertStmt instanceof mysqli_stmt) {
         mysqli_stmt_close($productInsertStmt);
+    }
+    if ($productMatchStmt instanceof mysqli_stmt) {
+        mysqli_stmt_close($productMatchStmt);
     }
     $productCheckStmt->close();
 
