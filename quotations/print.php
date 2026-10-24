@@ -99,9 +99,7 @@ $master_sql = "
         COALESCE(NULLIF(q.client_name_override, ''), c.company_name, '') AS client_name,
         c.contact_person AS client_contact_person,
         c.gstin AS client_gstin,
-        c.mobile AS client_mobile,
-        c.alternate_mobile AS client_alternate_mobile,
-        c.email AS client_email,
+        c.mobile AS client_mobile,        c.email AS client_email,
         c.address AS client_address
     FROM quotations q
     LEFT JOIN clients c
@@ -160,9 +158,7 @@ if (is_array($clientDetailsSnapshot)) {
         'company_name' => 'client_name',
         'contact_person' => 'client_contact_person',
         'gstin' => 'client_gstin',
-        'mobile' => 'client_mobile',
-        'alternate_mobile' => 'client_alternate_mobile',
-        'email' => 'client_email',
+        'mobile' => 'client_mobile',        'email' => 'client_email',
         'address' => 'client_address'
     ];
     foreach ($snapshotMap as $snapshotKey => $quotationKey) {
@@ -1403,7 +1399,7 @@ th {
         </div>
     <?php } ?>
 
-    <?php if (!empty($quotation['client_gstin']) || !empty($quotation['client_mobile']) || !empty($quotation['client_alternate_mobile'])) { ?>
+    <?php if (!empty($quotation['client_gstin']) || !empty($quotation['client_mobile']) ) { ?>
         <div class="client-inline">
             <?php if (!empty($quotation['client_gstin'])) { ?>
                 <span>
@@ -1416,12 +1412,6 @@ th {
                 <span>
                     <strong>Mobile:</strong>
                     <?= htmlspecialchars($quotation['client_mobile']); ?>
-                </span>
-            <?php } ?>
-            <?php if (!empty($quotation['client_alternate_mobile'])) { ?>
-                <span>
-                    <strong>Alternate Mobile:</strong>
-                    <?= htmlspecialchars($quotation['client_alternate_mobile']); ?>
                 </span>
             <?php } ?>
         </div>
