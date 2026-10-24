@@ -227,7 +227,7 @@ include("../includes/sidebar.php");
 
 <!-- MOBILE -->
 <div class="col-xl-4 col-lg-4 col-md-6">
-<label class="client-form-label">Mobile / Phone</label>
+<label class="client-form-label">Mobile</label>
 <input type="text" name="mobile" class="form-control" maxlength="20" placeholder="+91 9876543210" required>
 <div class="client-help">Enter the customer's mobile number.</div>
 </div>
@@ -237,31 +237,6 @@ include("../includes/sidebar.php");
 <label class="client-form-label">Email</label>
 <input type="email" name="email" class="form-control" maxlength="100" placeholder="client@company.com">
 </div>
-
-<!-- STATUS -->
-<div class="col-xl-4 col-lg-4 col-md-6">
-
-<label class="client-form-label">
-    Status
-</label>
-
-<select
-    name="status"
-    class="form-select"
->
-
-<option value="Active" selected>
-    Active
-</option>
-
-<option value="Inactive">
-    Inactive
-</option>
-
-</select>
-
-</div>
-
 
 <!-- ADDRESS -->
 <div class="col-12">
