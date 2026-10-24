@@ -169,7 +169,7 @@ include("../includes/sidebar.php");
 <div class="col-xl-6 col-lg-6 col-md-12">
 
 <label class="client-form-label">
-    Company Name
+    Customer / Company Name
     <span class="required-mark">*</span>
 </label>
 
@@ -225,62 +225,18 @@ include("../includes/sidebar.php");
 </div>
 
 
-<!-- EMAIL -->
-<div class="col-xl-4 col-lg-4 col-md-6">
-
-<label class="client-form-label">
-    Email
-</label>
-
-<input
-    type="email"
-    name="email"
-    class="form-control"
-    maxlength="100"
-    placeholder="client@company.com"
->
-
-</div>
-
-
 <!-- MOBILE -->
 <div class="col-xl-4 col-lg-4 col-md-6">
-
-<label class="client-form-label">
-    Mobile / Phone
-</label>
-
-<input
-    type="text"
-    name="mobile"
-    class="form-control"
-    maxlength="20"
-    placeholder="+91 9876543210"
->
-
-<div class="client-help">Enter a mobile number here or provide an alternate mobile number.</div>
-
+<label class="client-form-label">Mobile / Phone</label>
+<input type="text" name="mobile" class="form-control" maxlength="20" placeholder="+91 9876543210" required>
+<div class="client-help">Enter the customer's mobile number.</div>
 </div>
 
-
-<!-- ALTERNATE MOBILE -->
+<!-- EMAIL -->
 <div class="col-xl-4 col-lg-4 col-md-6">
-
-<label class="client-form-label">
-    Alternate Mobile
-</label>
-
-<input
-    type="text"
-    name="alternate_mobile"
-    id="alternate_mobile"
-    class="form-control"
-    maxlength="30"
-    placeholder="Alternate phone number"
->
-
+<label class="client-form-label">Email</label>
+<input type="email" name="email" class="form-control" maxlength="100" placeholder="client@company.com">
 </div>
-
 
 <!-- STATUS -->
 <div class="col-xl-4 col-lg-4 col-md-6">
@@ -311,7 +267,7 @@ include("../includes/sidebar.php");
 <div class="col-12">
 
 <label class="client-form-label">
-    Complete Address
+    Billing Address
     <span class="required-mark">*</span>
 </label>
 
@@ -372,27 +328,8 @@ document.addEventListener(
     "DOMContentLoaded",
     function () {
 
-        const form = document.getElementById("client-form");
         const mobile = document.querySelector('[name="mobile"]');
-        const alternateMobile = document.getElementById("alternate_mobile");
-
-        if (form) {
-            form.addEventListener("submit", function (event) {
-                const hasPhone = mobile.value.trim() !== "" || alternateMobile.value.trim() !== "";
-                if (!hasPhone) {
-                    event.preventDefault();
-                    mobile.setCustomValidity("Enter a mobile number or an alternate mobile number.");
-                    mobile.reportValidity();
-                } else {
-                    mobile.setCustomValidity("");
-                }
-            });
-            [mobile, alternateMobile].forEach(function (field) {
-                field.addEventListener("input", function () {
-                    mobile.setCustomValidity("");
-                });
-            });
-        }
+        if (mobile) mobile.addEventListener("input", function () { this.setCustomValidity(""); });
 
         const gstin =
             document.getElementById(
