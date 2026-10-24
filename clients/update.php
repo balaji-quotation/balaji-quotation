@@ -47,7 +47,7 @@ $existing_alternate_mobile = '';
 
 $existingClientStmt = mysqli_prepare(
     $conn,
-    "SELECT alternate_mobile FROM clients WHERE id = ? AND company_id = ? LIMIT 1"
+    "SELECT alternate_mobile, status FROM clients WHERE id = ? AND company_id = ? LIMIT 1"
 );
 if (!$existingClientStmt) {
     die("Database Error: " . mysqli_error($conn));
@@ -61,14 +61,15 @@ if (!$existingClient) {
     die("Client not found.");
 }
 $existing_alternate_mobile = trim((string)($existingClient['alternate_mobile'] ?? ''));
+$status = in_array((string)($existingClient['status'] ?? 'Active'), ['Active', 'Inactive'], true)
+    ? (string)$existingClient['status']
+    : 'Active';
 
 $address = trim(
     $_POST['address'] ?? ''
 );
 
-$status = trim(
-    $_POST['status'] ?? 'Active'
-);
+$status = 'Active';
 
 
 // =====================================================
