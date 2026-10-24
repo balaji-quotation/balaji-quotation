@@ -106,9 +106,8 @@ $quotation_no = postText(
     'quotation_no'
 );
 
-$client_id = intval(
-    $_POST['client_id'] ?? 0
-);
+$client_id = max(0, intval($_POST['client_id'] ?? 0));
+$client_name = postText('client_name');
 
 $rfq_no = postText(
     'rfq_no'
@@ -158,10 +157,10 @@ if ($quotation_no === '') {
     );
 }
 
-if ($client_id <= 0) {
+if ($client_name === '' || mb_strlen($client_name, 'UTF-8') > 150) {
     redirectWithError(
         $quotation_id,
-        "Please select a client."
+        "Type the customer or company name (maximum 150 characters)."
     );
 }
 
@@ -257,52 +256,27 @@ mysqli_stmt_close($stmt);
 
 
 // =====================================================
-// CHECK CLIENT EXISTS
+// VALIDATE OPTIONAL CUSTOMER MASTER LINK
 // =====================================================
 
-$stmt = mysqli_prepare(
-    $conn,
-    "
-        SELECT id
-        FROM clients
-        WHERE id = ?
-          AND company_id = ?
-        LIMIT 1
-    "
-);
-
-if (!$stmt) {
-    die(
-        "Database Error: " .
-        mysqli_error($conn)
+if ($client_id > 0) {
+    $stmt = mysqli_prepare(
+        $conn,
+        "SELECT company_name FROM clients WHERE id = ? AND company_id = ? LIMIT 1"
     );
-}
-
-mysqli_stmt_bind_param(
-    $stmt,
-    "ii",
-    $client_id,
-    $companyId
-);
-
-mysqli_stmt_execute($stmt);
-
-$result =
-    mysqli_stmt_get_result($stmt);
-
-if (
-    !$result ||
-    mysqli_num_rows($result) === 0
-) {
+    if (!$stmt) {
+        die("Database Error: " . mysqli_error($conn));
+    }
+    mysqli_stmt_bind_param($stmt, "ii", $client_id, $companyId);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    $selectedClient = $result ? mysqli_fetch_assoc($result) : null;
     mysqli_stmt_close($stmt);
-
-    redirectWithError(
-        $quotation_id,
-        "Selected client was not found."
-    );
+    if (!$selectedClient) {
+        redirectWithError($quotation_id, "Selected Customer Master record was not found.");
+    }
+    $client_name = postText('client_name', (string)$selectedClient['company_name']);
 }
-
-mysqli_stmt_close($stmt);
 
 
 // =====================================================
@@ -623,7 +597,8 @@ try {
         UPDATE quotations
         SET
             quotation_no = ?,
-            client_id = ?,
+            client_id = NULLIF(?, 0),
+            client_name_override = ?,
             rfq_no = ?,
             rfq_date = ?,
             quotation_date = ?,
@@ -652,9 +627,10 @@ try {
 
     mysqli_stmt_bind_param(
         $stmt,
-        "sissssssssiii",
+        "sisssssssssiii",
         $quotation_no,
         $client_id,
+        $client_name,
         $rfq_no,
         $rfq_date,
         $quotation_date,
