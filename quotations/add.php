@@ -866,10 +866,6 @@ $term_sets_json =
             <label class="quote-form-label">Mobile</label>
             <input type="text" name="client_mobile" id="clientMobile" class="form-control" maxlength="20">
         </div>
-        <div class="col-lg-3 col-md-6">
-            <label class="quote-form-label">Alternate Mobile</label>
-            <input type="text" name="client_alternate_mobile" id="clientAlternateMobile" class="form-control" maxlength="30">
-        </div>
         <div class="col-lg-6 col-md-12">
             <label class="quote-form-label">Email</label>
             <input type="email" name="client_email" id="clientEmail" class="form-control" maxlength="100">
@@ -2579,9 +2575,7 @@ document.addEventListener("DOMContentLoaded", function () {
         company_name: "clientName",
         contact_person: "clientContactPerson",
         gstin: "clientGstin",
-        mobile: "clientMobile",
-        alternate_mobile: "clientAlternateMobile",
-        email: "clientEmail",
+        mobile: "clientMobile",        email: "clientEmail",
         address: "clientAddress"
     };
     if (!select || !clientId) return;
