@@ -41,7 +41,7 @@ $email = trim(
 );
 
 $mobile = trim($_POST['mobile'] ?? '');
-$alternate_mobile = trim($_POST['alternate_mobile'] ?? '');
+$alternate_mobile = '';
 
 $address = trim(
     $_POST['address'] ?? ''
@@ -64,11 +64,11 @@ if ($company_name === '' || mb_strlen($company_name, 'UTF-8') > 150) {
 if ($address === '') {
     die("Complete Address is required.");
 }
-if ($mobile === '' && $alternate_mobile === '') {
-    die("Mobile or Alternate Mobile is required.");
+if ($mobile === '') {
+    die("Mobile is required.");
 }
-if (strlen($mobile) > 20 || strlen($alternate_mobile) > 30) {
-    die("Mobile must be 20 characters or fewer and Alternate Mobile 30 characters or fewer.");
+if (strlen($mobile) > 20) {
+    die("Mobile must be 20 characters or fewer.");
 }
 if ($gstin !== '' && strlen($gstin) !== 15) {
     die("GSTIN must be 15 characters.");
