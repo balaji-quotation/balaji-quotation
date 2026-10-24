@@ -575,10 +575,6 @@ $term_sets_json =
     font-size: 12px;
 }
 
-.quote-corporate-table .save-to-product-checkbox {
-    flex: 0 0 auto;
-}
-
 .quote-corporate-table .line-amount-value,
 .quote-corporate-table [data-auto-amount-display] {
     color: #173b6d;
@@ -1505,7 +1501,6 @@ document.addEventListener(
         const taxConfig = <?= json_encode($templateConfig['tax'] ?? ['gst_enabled'=>false,'gst_rate'=>0], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
         const totalsConfig = <?= json_encode($templateConfig['totals'] ?? ['show_line_amount'=>true,'show_subtotal'=>true,'show_tax'=>false,'show_grand_total'=>true], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
-        const canSaveProducts = <?= erpCan('quotations.save_products_to_master') ? 'true' : 'false'; ?>;
         let columns = Array.isArray(defaultColumns) && defaultColumns.length
             ? defaultColumns
             : [{label:"Description",unit:"",type:"text",align:"left"}];
@@ -1913,8 +1908,6 @@ document.addEventListener(
 
             const existingValues = [];
             const existingProductIds = [];
-            const existingSaveToProduct = [];
-
             quotationBody
                 .querySelectorAll(
                     "tr"
@@ -1943,10 +1936,7 @@ document.addEventListener(
                             rowValues
                         );
                         const productPicker = row.querySelector(".product-master-picker");
-                        existingProductIds.push(productPicker ? productPicker.value : "");
-                        const saveProductCheckbox = row.querySelector(".save-to-product-checkbox");
-                        existingSaveToProduct.push(saveProductCheckbox && saveProductCheckbox.checked ? "1" : "");
-                    }
+                        existingProductIds.push(productPicker ? productPicker.value : "");                    }
                 );
 
 
@@ -2100,14 +2090,7 @@ document.addEventListener(
                         this.dataset.appliedCatalogValues = JSON.stringify(applyCatalogProduct(tr, this.value));
                     } else {
                         this.dataset.appliedCatalogValues = "{}";
-                    }
-
-                    const saveProductCheckbox = tr.querySelector(".save-to-product-checkbox");
-                    if (saveProductCheckbox) {
-                        saveProductCheckbox.disabled = this.value !== "";
-                        if (saveProductCheckbox.disabled) saveProductCheckbox.checked = false;
-                    }
-                    updateLiveAmounts();
+                    }                    updateLiveAmounts();
                 });
 
                 const productWrap = document.createElement("div");
@@ -2117,25 +2100,6 @@ document.addEventListener(
                 productLabel.textContent = "Product Master";
                 productWrap.appendChild(productLabel);
                 productWrap.appendChild(productPicker);
-
-                if (canSaveProducts) {
-                    const saveProductLabel = document.createElement("label");
-                    saveProductLabel.className = "small text-muted d-flex align-items-center gap-1 mt-2";
-                    const saveProductCheckbox = document.createElement("input");
-                    saveProductCheckbox.type = "checkbox";
-                    saveProductCheckbox.name = `save_to_product[${rowIndex}]`;
-                    saveProductCheckbox.value = "1";
-                    saveProductCheckbox.className = "form-check-input mt-0 save-to-product-checkbox";
-                    saveProductCheckbox.checked = existingSaveToProduct[rowIndex] === "1";
-                    saveProductCheckbox.disabled = productPicker.value !== "";
-                    if (saveProductCheckbox.disabled) saveProductCheckbox.checked = false;
-                    saveProductLabel.appendChild(saveProductCheckbox);
-                    const saveProductText = document.createElement("span");
-                    saveProductText.textContent = "Save manual item to Product Master";
-                    saveProductLabel.appendChild(saveProductText);
-                    productWrap.appendChild(saveProductLabel);
-                }
-
                 const descriptionIndex = columns.findIndex(function (column) {
                     const label = String(column.label || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
                     return amountColumnRole(column) !== "auto_amount"
@@ -2252,10 +2216,7 @@ document.addEventListener(
                         );
 
                     const productPicker = row.querySelector(".product-master-picker");
-                    if (productPicker) productPicker.name = `product_id[${rowIndex}]`;
-                    const saveProductCheckbox = row.querySelector(".save-to-product-checkbox");
-                    if (saveProductCheckbox) saveProductCheckbox.name = `save_to_product[${rowIndex}]`;
-                }
+                    if (productPicker) productPicker.name = `product_id[${rowIndex}]`;                }
             );
         }
 
