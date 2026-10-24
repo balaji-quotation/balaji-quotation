@@ -47,9 +47,7 @@ $address = trim(
     $_POST['address'] ?? ''
 );
 
-$status = trim(
-    $_POST['status'] ?? 'Active'
-);
+$status = 'Active';
 
 
 /*
