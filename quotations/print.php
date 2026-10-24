@@ -100,6 +100,7 @@ $master_sql = "
         c.contact_person AS client_contact_person,
         c.gstin AS client_gstin,
         c.mobile AS client_mobile,
+        c.alternate_mobile AS client_alternate_mobile,
         c.email AS client_email,
         c.address AS client_address
     FROM quotations q
@@ -151,6 +152,24 @@ mysqli_stmt_close(
 
 if (!$quotation) {
     die("Quotation not found.");
+}
+
+$clientDetailsSnapshot = json_decode((string)($quotation['client_details_snapshot'] ?? ''), true);
+if (is_array($clientDetailsSnapshot)) {
+    $snapshotMap = [
+        'company_name' => 'client_name',
+        'contact_person' => 'client_contact_person',
+        'gstin' => 'client_gstin',
+        'mobile' => 'client_mobile',
+        'alternate_mobile' => 'client_alternate_mobile',
+        'email' => 'client_email',
+        'address' => 'client_address'
+    ];
+    foreach ($snapshotMap as $snapshotKey => $quotationKey) {
+        if (array_key_exists($snapshotKey, $clientDetailsSnapshot)) {
+            $quotation[$quotationKey] = (string)$clientDetailsSnapshot[$snapshotKey];
+        }
+    }
 }
 
 $templateConfig = json_decode((string)($quotation['template_config_snapshot'] ?? ''), true);
@@ -1384,7 +1403,7 @@ th {
         </div>
     <?php } ?>
 
-    <?php if (!empty($quotation['client_gstin']) || !empty($quotation['client_mobile'])) { ?>
+    <?php if (!empty($quotation['client_gstin']) || !empty($quotation['client_mobile']) || !empty($quotation['client_alternate_mobile'])) { ?>
         <div class="client-inline">
             <?php if (!empty($quotation['client_gstin'])) { ?>
                 <span>
@@ -1397,6 +1416,12 @@ th {
                 <span>
                     <strong>Mobile:</strong>
                     <?= htmlspecialchars($quotation['client_mobile']); ?>
+                </span>
+            <?php } ?>
+            <?php if (!empty($quotation['client_alternate_mobile'])) { ?>
+                <span>
+                    <strong>Alternate Mobile:</strong>
+                    <?= htmlspecialchars($quotation['client_alternate_mobile']); ?>
                 </span>
             <?php } ?>
         </div>
