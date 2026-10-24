@@ -44,7 +44,13 @@ if ($quotation_id <= 0) {
 
 $master_sql = "
     SELECT q.*,
-           COALESCE(NULLIF(q.client_name_override, ''), c.company_name, '') AS client_name
+           COALESCE(NULLIF(q.client_name_override, ''), c.company_name, '') AS client_name,
+        c.contact_person AS master_contact_person,
+        c.gstin AS master_gstin,
+        c.mobile AS master_mobile,
+        c.alternate_mobile AS master_alternate_mobile,
+        c.email AS master_email,
+        c.address AS master_address
     FROM quotations q
     LEFT JOIN clients c ON c.id = q.client_id AND c.company_id = q.company_id
     WHERE q.id = ?
@@ -64,6 +70,10 @@ mysqli_stmt_execute($master_stmt);
 
 $master_result = mysqli_stmt_get_result($master_stmt);
 $quotation = mysqli_fetch_assoc($master_result);
+$clientDetailsSnapshot = json_decode((string)($quotation['client_details_snapshot'] ?? ''), true);
+if (!is_array($clientDetailsSnapshot)) {
+    $clientDetailsSnapshot = [];
+}
 
 mysqli_stmt_close($master_stmt);
 
@@ -92,6 +102,7 @@ $client_sql = "
         contact_person,
         gstin,
         mobile,
+        alternate_mobile,
         email,
         address
     FROM clients
@@ -588,6 +599,7 @@ unset($_SESSION['quotation_error']);
 }
 
 .customer-options summary { cursor:pointer; color:#315b91; font-size:12px; font-weight:600; }
+.client-information-panel { background:#f8fbff; border:1px solid #e2eaf4; border-radius:10px; padding:14px; }
 .customer-options select { max-width:100%; }
 #toggleQuickClient { text-decoration:none; }
 </style>
@@ -722,45 +734,54 @@ unset($_SESSION['quotation_error']);
 </div>
 
 
-<div class="col-xl-3 col-lg-4 col-md-6">
-
-<label class="quote-form-label">
-    Client *
-</label>
-
-<input
-    type="text"
-    name="client_name"
-    id="clientName"
-    class="form-control"
-    maxlength="150"
-    placeholder="Type customer / company name"
-    autocomplete="off"
-    value="<?= htmlspecialchars((string)($quotation['client_name'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>"
-    required
->
-<input
-    type="hidden"
-    name="client_id"
-    id="client_id"
-    value="<?= intval($quotation['client_id'] ?? 0); ?>"
->
-<small class="text-muted d-block mt-1">Type the customer name or optionally choose saved details.</small>
-<details class="customer-options mt-2" <?= !empty($quotation['client_id']) ? 'open' : ''; ?>>
-    <summary>Choose from Customer Master</summary>
-    <select id="clientMasterSelect" class="form-select form-select-sm mt-2">
-        <option value="">Select a saved customer</option>
-        <?php foreach ($clients as $client) { ?>
-        <option
-            value="<?= intval($client['id']); ?>"
-            <?= intval($quotation['client_id'] ?? 0) === intval($client['id']) ? 'selected' : ''; ?>
-        ><?= htmlspecialchars($client['company_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></option>
-        <?php } ?>
-    </select>
-</details>
-
+<div class="col-12 client-information-panel">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <div>
+            <label class="quote-form-label mb-0">Customer Information *</label>
+            <small class="text-muted d-block">Naye customer ki details yahin type karein. Purana customer lena ho to Master dropdown se select karein.</small>
+        </div>
+        <input type="hidden" name="client_id" id="client_id" value="<?= intval($quotation['client_id'] ?? 0); ?>">
+        <details class="customer-options" <?= !empty($quotation['client_id']) ? 'open' : ''; ?>>
+            <summary>Choose existing customer</summary>
+            <select id="clientMasterSelect" class="form-select form-select-sm mt-2">
+                <option value="">Select from Customer Master</option>
+                <?php foreach ($clients as $client) { ?>
+                <option value="<?= intval($client['id']); ?>" <?= intval($quotation['client_id'] ?? 0) === intval($client['id']) ? 'selected' : ''; ?>><?= htmlspecialchars($client['company_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></option>
+                <?php } ?>
+            </select>
+        </details>
+    </div>
+    <div class="row g-2">
+        <div class="col-lg-4 col-md-6">
+            <label class="quote-form-label">Customer / Company Name *</label>
+            <input type="text" name="client_name" id="clientName" class="form-control" maxlength="150" autocomplete="off" value="<?= htmlspecialchars((string)($clientDetailsSnapshot['company_name'] ?? $quotation['client_name'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" required>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <label class="quote-form-label">Contact Person</label>
+            <input type="text" name="client_contact_person" id="clientContactPerson" class="form-control" maxlength="150" value="<?= htmlspecialchars((string)($clientDetailsSnapshot['contact_person'] ?? $quotation['master_contact_person'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>">
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <label class="quote-form-label">GSTIN</label>
+            <input type="text" name="client_gstin" id="clientGstin" class="form-control" maxlength="30" value="<?= htmlspecialchars((string)($clientDetailsSnapshot['gstin'] ?? $quotation['master_gstin'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>">
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <label class="quote-form-label">Mobile</label>
+            <input type="text" name="client_mobile" id="clientMobile" class="form-control" maxlength="20" value="<?= htmlspecialchars((string)($clientDetailsSnapshot['mobile'] ?? $quotation['master_mobile'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>">
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <label class="quote-form-label">Alternate Mobile</label>
+            <input type="text" name="client_alternate_mobile" id="clientAlternateMobile" class="form-control" maxlength="30" value="<?= htmlspecialchars((string)($clientDetailsSnapshot['alternate_mobile'] ?? $quotation['master_alternate_mobile'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>">
+        </div>
+        <div class="col-lg-6 col-md-12">
+            <label class="quote-form-label">Email</label>
+            <input type="email" name="client_email" id="clientEmail" class="form-control" maxlength="100" value="<?= htmlspecialchars((string)($clientDetailsSnapshot['email'] ?? $quotation['master_email'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>">
+        </div>
+        <div class="col-12">
+            <label class="quote-form-label">Billing Address</label>
+            <textarea name="client_address" id="clientAddress" class="form-control" rows="2"><?= htmlspecialchars((string)($clientDetailsSnapshot['address'] ?? $quotation['master_address'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></textarea>
+        </div>
+    </div>
 </div>
-
 
 <div class="col-xl-2 col-lg-4 col-md-6">
 
@@ -940,49 +961,6 @@ foreach ($statuses as $status) {
 <?php } ?>
 
 </select>
-
-</div>
-
-
-<!-- CLIENT DETAIL PREVIEW -->
-
-<div class="col-12">
-
-<div
-    id="clientDetailBox"
-    class="client-detail-box mt-1"
->
-
-<div class="row g-2">
-
-    <div class="col-md-3">
-        <div class="client-detail-label">Contact Person</div>
-        <div class="client-detail-value" id="client_contact">-</div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="client-detail-label">GSTIN</div>
-        <div class="client-detail-value" id="client_gstin">-</div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="client-detail-label">Mobile</div>
-        <div class="client-detail-value" id="client_mobile">-</div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="client-detail-label">Email</div>
-        <div class="client-detail-value" id="client_email">-</div>
-    </div>
-
-    <div class="col-12">
-        <div class="client-detail-label">Address</div>
-        <div class="client-detail-value" id="client_address">-</div>
-    </div>
-
-</div>
-
-</div>
 
 </div>
 
@@ -1373,77 +1351,6 @@ document.addEventListener(
             "change",
             updateCurrencyColumns
         );
-
-
-        // =================================================
-        // CLIENT DETAILS
-        // =================================================
-
-        const clientSelect =
-            document.getElementById(
-                "client_id"
-            );
-
-        const clientDetailBox =
-            document.getElementById(
-                "clientDetailBox"
-            );
-
-        function showClientDetails() {
-
-            const clientId =
-                Number(
-                    clientSelect.value
-                );
-
-            const client =
-                clientsData.find(
-                    item =>
-                        Number(item.id) ===
-                        clientId
-                );
-
-            if (!client) {
-                clientDetailBox.style.display =
-                    "none";
-                return;
-            }
-
-            document.getElementById(
-                "client_contact"
-            ).textContent =
-                client.contact_person || "-";
-
-            document.getElementById(
-                "client_gstin"
-            ).textContent =
-                client.gstin || "-";
-
-            document.getElementById(
-                "client_mobile"
-            ).textContent =
-                client.mobile || "-";
-
-            document.getElementById(
-                "client_email"
-            ).textContent =
-                client.email || "-";
-
-            document.getElementById(
-                "client_address"
-            ).textContent =
-                client.address || "-";
-
-            clientDetailBox.style.display =
-                "block";
-        }
-
-        clientSelect.addEventListener(
-            "change",
-            showClientDetails
-        );
-
-        showClientDetails();
 
 
         // =================================================
@@ -2232,25 +2139,38 @@ document.addEventListener(
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    var clientName = document.getElementById("clientName");
-    var clientId = document.getElementById("client_id");
-    var masterSelect = document.getElementById("clientMasterSelect");
-    if (!clientName || !clientId || !masterSelect) return;
-    masterSelect.value = clientId.value;
-    masterSelect.addEventListener("change", function () {
-        if (!this.value) {
+    const customers = <?= json_encode($clients, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+    const select = document.getElementById("clientMasterSelect");
+    const clientId = document.getElementById("client_id");
+    if (!select || !clientId) return;
+    select.value = clientId.value;
+    const fieldMap = {
+        company_name: "clientName",
+        contact_person: "clientContactPerson",
+        gstin: "clientGstin",
+        mobile: "clientMobile",
+        alternate_mobile: "clientAlternateMobile",
+        email: "clientEmail",
+        address: "clientAddress"
+    };
+    select.addEventListener("change", function () {
+        const customer = customers.find(item => String(item.id) === String(this.value));
+        if (!customer) {
             clientId.value = "";
-            clientId.dispatchEvent(new Event("change"));
             return;
         }
-        clientId.value = this.value;
-        clientName.value = this.options[this.selectedIndex].textContent.trim();
-        clientId.dispatchEvent(new Event("change"));
+        clientId.value = String(customer.id);
+        Object.entries(fieldMap).forEach(([key, id]) => {
+            const field = document.getElementById(id);
+            if (field) field.value = customer[key] || "";
+        });
     });
-    clientName.addEventListener("input", function () {
-        clientId.value = "";
-        masterSelect.value = "";
-        clientId.dispatchEvent(new Event("change"));
+    document.getElementById("clientName")?.addEventListener("input", function () {
+        const selected = customers.find(item => String(item.id) === String(clientId.value));
+        if (selected && this.value.trim() !== String(selected.company_name || "").trim()) {
+            clientId.value = "";
+            select.value = "";
+        }
     });
 });
 </script>
