@@ -288,7 +288,7 @@ include("../includes/sidebar.php");
 
 <!-- MOBILE -->
 <div class="col-xl-4 col-lg-4 col-md-6">
-<label class="client-form-label">Mobile / Phone</label>
+<label class="client-form-label">Mobile</label>
 <input
     type="text"
     name="mobile"
@@ -313,38 +313,6 @@ include("../includes/sidebar.php");
     placeholder="client@company.com"
 >
 </div>
-
-<!-- STATUS -->
-
-<div class="col-xl-4 col-lg-4 col-md-6">
-
-<label class="client-form-label">
-    Status
-</label>
-
-<select
-    name="status"
-    class="form-select"
->
-
-<option
-    value="Active"
-    <?= (($row['status'] ?? '') === 'Active') ? 'selected' : ''; ?>
->
-    Active
-</option>
-
-<option
-    value="Inactive"
-    <?= (($row['status'] ?? '') === 'Inactive') ? 'selected' : ''; ?>
->
-    Inactive
-</option>
-
-</select>
-
-</div>
-
 
 <!-- ADDRESS -->
 
