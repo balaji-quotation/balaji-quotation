@@ -1161,7 +1161,7 @@ $term_sets_json =
         <div class="quote-section-note">Enter the products and rates for this quotation.</div>
     </div>
     <div class="quote-items-actions">
-        <?php if (erpCan('products.view')): ?><a href="../products/index.php" class="btn btn-outline-primary btn-sm">Product Master</a><?php endif; ?>
+        <?php if (erpCan('products.view')): ?><a href="/quotation/products/index.php" class="btn btn-outline-primary btn-sm" title="Open Product Master"><i class="ri-box-3-line me-1"></i>Product Master</a><?php endif; ?>
         <button type="button" class="btn btn-primary btn-sm" id="addRow">+ Add Item</button>
     </div>
 </div>
