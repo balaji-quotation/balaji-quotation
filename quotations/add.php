@@ -1843,6 +1843,10 @@ document.addEventListener(
             const customValues = product.custom_fields && typeof product.custom_fields === "object"
                 ? product.custom_fields
                 : {};
+            const hasProductNameColumn = columns.some(function (column) {
+                const columnLabel = normalize(column.label);
+                return /^(product|productname|item|itemname|particular|particulars)$/.test(columnLabel);
+            });
             const values = {};
 
             columns.forEach(function (column, index) {
@@ -1867,7 +1871,9 @@ document.addEventListener(
                 } else if (/^(specification|specifications|specs|productspecification|productspecifications|itemspecification|itemspecifications)$/.test(label)) {
                     value = product.description || "";
                 } else if (/^(description|productdescription|itemdescription|details)$/.test(label)) {
-                    value = product.description || product.product_name || "";
+                    value = hasProductNameColumn
+                        ? (product.description || "")
+                        : [product.product_name, product.description].filter(Boolean).join(" — ");
                 } else if (/^(productcode|itemcode|code|sku)$/.test(label)) {
                     value = product.product_code || "";
                 } else if (/^(unit|uom|unitofmeasure)$/.test(label)) {
