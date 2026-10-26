@@ -1864,6 +1864,8 @@ document.addEventListener(
                     value = product.part_number || "";
                 } else if (/^(material|materialgrade|grade|materialgrademre)$/.test(label) || label.includes("material") || label.includes("grade")) {
                     value = product.material || "";
+                } else if (/^(specification|specifications|specs|productspecification|productspecifications|itemspecification|itemspecifications)$/.test(label)) {
+                    value = product.description || "";
                 } else if (/^(description|productdescription|itemdescription|details)$/.test(label)) {
                     value = product.description || product.product_name || "";
                 } else if (/^(productcode|itemcode|code|sku)$/.test(label)) {
